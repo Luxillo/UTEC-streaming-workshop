@@ -1,0 +1,86 @@
+= Práctica con Confluent Cloud: Apache Kafka®, Apache Flink® y Tableflow
+Viktor Gamov <vgamov@confluent.io>, © 2025 Confluent, Inc.
+2025-09-11
+:revdate: 2025-09-11 23:52:23 -0600
+:linkattrs:
+:ast: &ast;
+:y: &#10003;
+:n: &#10008;
+:y: icon:check-sign[role="green"]
+:n: icon:check-minus[role="red"]
+:c: icon:file-text-alt[role="blue"]
+:toc: auto
+:toc-placement: auto
+:toc-position: auto
+:toc-title: Tabla de contenido
+:toclevels: 3
+:idprefix:
+:idseparator: -
+:sectanchors:
+:icons: font
+:source-highlighter: highlight.js
+:highlightjs-theme: idea
+:experimental:
+
+Confluent Cloud es una plataforma totalmente administrada para Apache Kafka, diseñada para simplificar la transmisión y el procesamiento de datos en tiempo real.
+Integra Kafka para la ingesta de datos, Flink para el procesamiento de transmisiones y Tableflow para convertir datos de transmisión en tablas Apache Iceberg listas para análisis.
+DuckDB, una base de datos analítica ligera, permite consultar estas tablas Iceberg, lo que la convierte en una herramienta ideal para el componente de análisis del taller. El taller está diseñado para desarrolladores con conocimientos básicos de programación, posiblemente nuevos en Kafka, Flink o Tableflow, y busca brindar experiencia práctica en un plazo breve.
+
+[IMPORTANTE]
+====
+🚨 **IMPORTANTE CRÍTICO - PREVENCIÓN DE COSTOS**: Después de completar este taller, **siga inmediatamente la guía de desmontaje** para evitar cargos inesperados de los pools de cómputo de Flink y las integraciones del catálogo de Tableflow.
+
+📋 **Guía de desmontaje**: `guides/05-teardown-resources.adoc`
+
+**Ejecute los pasos de desmontaje dentro de los 15 minutos posteriores a la finalización del taller** para evitar la facturación continua de los recursos en la nube.
+====
+
+toc::[]
+
+== Resumen del taller
+
+Este taller práctico de 2 horas introduce a los desarrolladores a la creación de pipelines de datos en tiempo real con Confluent Cloud.
+
+Aprenderás a transmitir datos con Apache Kafka, procesarlos en tiempo real con Apache Flink y convertirlos en tablas Apache Iceberg usando Tableflow.
+El taller presupone conocimientos básicos de programación y ofrece una guía paso a paso.
+
+== Qué aprenderás
+
+* Configurar un clúster de Kafka y gestionar temas en Confluent Cloud.
+* Escribir y ejecutar un trabajo de Flink para procesar datos en streaming.
+* Usar Tableflow para materializar temas de Kafka como tablas Iceberg y consultarlos con DuckDB.
+
+== Requisitos previos
+
+* *Cuenta de GitHub*: Necesaria para acceder a GitHub Codespaces o clonar el repositorio del taller.
+** https://github.com/join[Crea una cuenta gratuita de GitHub] si no tienes una
+* *VSCode con extensión de Confluent*: Para gestionar recursos de Confluent Cloud. ** https://docs.confluent.io/cloud/current/client-apps/vs-code-extension.html[https://docs.confluent.io/cloud/current/client-apps/vs-code-extension.html]
+* *Confluent CLI*: Para interactuar con clústeres y temas de Kafka.
+** https://docs.confluent.io/confluent-cli/current/install.html[https://docs.confluent.io/confluent-cli/current/install.html]
+* *DuckDB*: Para consultar tablas Iceberg de Tableflow.
+** https://duckdb.org/docs/installation/[https://duckdb.org/docs/installation/]
+
+[NOTA]
+====
+🖥️ **Compatibilidad con plataformas**: Todos los scripts del taller están diseñados para Linux y macOS (con shell zsh).
+
+💻 **Usuarios de Windows**: Recomendamos usar GitHub Codespaces o VS Code Dev Containers para una mejor experiencia. La configuración de DevContainer proporciona un entorno Linux consistente con todas las herramientas preinstaladas.
+
+🚀 **Opciones de inicio rápido**:
+* **GitHub Codespaces** (Recomendado para Windows): Haz clic en "Código" → "Codespaces" → "Crear codespace"
+* **Contenedores de desarrollo**: Abrir en VS Code → Ctrl+Shift+P → "Contenedores de desarrollo: Reabrir en el contenedor"
+* **Configuración local**: Los usuarios de Linux/MacOS pueden ejecutar scripts directamente
+====
+
+=== Segmentos del taller y características cubiertas
+
+|===
+|*Segmento*|*Duración*|*Características cubiertas*|*Objetivo*
+
+|Introducción|15 min|Descripción general de Kafka, Flink y Tableflow|Comprender la arquitectura basada en eventos
+|Configuración de Confluent Cloud|15 min|Creación de clústeres de Kafka|Configurar un clúster de Kafka administrado
+|Práctica con Kafka|30 min|Kafka Temas, Productores, Consumidores | Transmite datos con Kafka
+|Flink Práctica | 45 min | Procesamiento de flujos de Flink | Procesa datos en tiempo real
+|Tableflow Práctica | 30 min | Tableflow, Iceberg, DuckDB | Materializa y consulta datos listos para análisis
+|Resumen y preguntas y respuestas | 15 min | Todas las funciones | Resumen y respuestas
+|===
