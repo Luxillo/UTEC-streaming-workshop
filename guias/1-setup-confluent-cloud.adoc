@@ -1,5 +1,5 @@
-🔐 Configuración de Confluent Cloud (15 minutos)
-Viktor Gamov <vgamov@confluent.io>, © 2025 Confluent, Inc.
+= 🔐 Configuración de Confluent Cloud (15 minutos)
+Luis Chavez <lchavez.olaya@gmail.com>, © 2025
 2025-09-11
 :revdate: 2025-09-11
 :linkattrs:
