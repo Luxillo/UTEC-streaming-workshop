@@ -1,0 +1,261 @@
+= 📊 Taller Práctico de Kafka con Datos de CoinGecko (30 minutos)
+Viktor Gamov <vgamov@confluent.io>, © 2025 Confluent, Inc.
+2025-09-11
+:revdate: 2025-09-11
+:linkattrs:
+:ast: &ast;
+:y: &#10003;
+:n: &#10008;
+:y: icon:check-sign[role="green"]
+:n: icon:check-minus[role="red"]
+:c: icon:file-text-alt[role="blue"]
+:toc: auto
+:toc-placement: auto
+:toc-position: auto
+:toc-title: Contenido de la Guía de Kafka
+:toclevels: 3
+:idprefix:
+:idseparator: -
+:sectanchors:
+:icons: font
+:source-highlighter: highlight.js
+:highlightjs-theme: idea
+:experimental:
+
+Esta guía demuestra la gestión de tópicos de Kafka y el streaming de datos en tiempo real utilizando datos de precios de criptomonedas de la API de CoinGecko.
+
+toc::[]
+
+== 🎯 Objetivos de Aprendizaje
+
+Al final de esta sección, habrás:
+
+* ✅ Creado tópicos de Kafka con diferentes configuraciones.
+* ✅ Configurado un Conector de Origen HTTP (HTTP Source Connector) para obtener datos de criptomonedas en vivo.
+* ✅ Monitoreado el streaming de datos de precios en tiempo real.
+* ✅ Consumido datos de criptomonedas utilizando la Extensión de Confluent para VS Code.
+
+== ⏱️ Distribución del Tiempo
+
+* **Gestión de Tópicos**: 10 minutos
+* **Configuración del Conector de Origen HTTP**: 5 minutos
+* **Operaciones de Productor**: 5 minutos
+* **Operaciones de Consumidor**: 10 minutos
+
+== 📋 Gestión de Tópicos (10 minutos)
+
+=== Crear Tópicos del Taller
+
+[source,bash]
+----
+# Crear un tópico para los precios de las criptomonedas
+confluent kafka topic create crypto-prices \
+  --partitions 3 \
+  --config retention.ms=604800000 \
+  --config cleanup.policy=delete
+
+# Crear un tópico para alertas de precios (menor retención)
+confluent kafka topic create price-alerts \
+  --partitions 1 \
+  --config retention.ms=86400000 \
+  --config cleanup.policy=delete
+
+# Crear un tópico compactado para los últimos precios
+confluent kafka topic create latest-prices \
+  --partitions 3 \
+  --config cleanup.policy=compact \
+  --config min.cleanable.dirty.ratio=0.01
+----
+
+=== Verificar la Configuración del Tópico
+
+[source,bash]
+----
+# Listar todos los tópicos
+confluent kafka topic list
+
+# Describir el tópico crypto-prices
+confluent kafka topic describe crypto-prices
+
+# Listar las configuraciones del tópico
+confluent kafka topic configuration list crypto-prices
+----
+
+=== Mejores Prácticas de Configuración de Tópicos
+
+[source,bash]
+----
+# Actualizar la configuración de un tópico (ejemplo: aumentar la retención)
+confluent kafka topic update crypto-prices \
+  --config retention.ms=1209600000
+
+# Ver la configuración actualizada
+confluent kafka topic configuration list crypto-prices
+----
+
+== 🔌 Configuración del Conector de Origen HTTP (5 minutos)
+
+=== Configurar Variables de Entorno
+
+Primero, configura tus credenciales de API:
+
+[source,bash]
+----
+# Navegar al directorio de scripts
+cd ./scripts/kafka
+
+# Copiar el archivo de entorno de ejemplo y configurar tus claves de API
+cp .env.example .env
+
+# Editar el archivo .env con tus claves de API reales:
+# export KAFKA_API_KEY="tu-clave-api-kafka"
+# export KAFKA_API_SECRET="tu-secreto-api-kafka"
+# export SCHEMA_REGISTRY_API_KEY="tu-clave-api-schema-registry"
+# export SCHEMA_REGISTRY_API_SECRET="tu-secreto-api-schema-registry"
+
+# Cargar las variables de entorno
+source .env
+----
+
+=== Desplegar el Conector
+
+[source,bash]
+----
+# Desplegar el Conector de Origen HTTP usando el script de despliegue
+./deploy-connector.sh
+
+# El script hará lo siguiente:
+# - Cargar las variables de entorno desde .env
+# - Crear la configuración del conector con los ajustes de la API de CoinGecko
+# - Desplegar el conector coingecko-price-connector
+# - Verificar que el despliegue fue exitoso
+----
+
+=== Validar el Estado del Conector
+
+[source,bash]
+----
+# Comprobar el estado y la salud del conector
+./validate-connector.sh
+
+# Esto mostrará:
+# - Lista de todos los conectores
+# - ID y estado del conector
+# - Validación de la conexión
+----
+
+== 🔍 Datos del Tópico (5 minutos)
+
+=== Entender la Estructura del Mensaje Mejorado
+
+La API de CoinGecko devuelve datos enriquecidos con información de capitalización de mercado y volumen:
+[source,json]
+----
+{
+  "bitcoin": {
+    "usd": 45000.50,
+    "usd_market_cap": 850000000000,
+    "usd_24h_vol": 25000000000,
+    "usd_24h_change": 2.34,
+    "last_updated_at": 1640995200
+  },
+  "ethereum": {
+    "usd": 3500.75,
+    "usd_market_cap": 420000000000,
+    "usd_24h_vol": 15000000000,
+    "usd_24h_change": -1.23,
+    "last_updated_at": 1640995200
+  },
+  "binancecoin": {
+    "usd": 450.25,
+    "usd_market_cap": 67000000000,
+    "usd_24h_vol": 2000000000,
+    "usd_24h_change": 1.85,
+    "last_updated_at": 1640995200
+  }
+}
+----
+
+== 👥 Operaciones de Consumidor (10 minutos)
+
+=== Consumo Visual de Datos con VS Code
+
+La mejor manera de consumir y visualizar los datos de criptomonedas es usando la Extensión de Confluent para Visual Studio Code.
+
+=== Usando la Extensión de Confluent para VS Code
+
+1.  **Instalar la Extensión**: Busca "Confluent" en el mercado de Extensiones de VS Code.
+2.  **Conectar a Confluent Cloud**: Usa tu nombre de usuario y contraseña de Confluent Cloud.
+3.  **Explorar Tópicos**: Navega hasta el tópico `crypto-prices`.
+4.  **Consumir Mensajes**: Haz clic en el tópico para comenzar a consumir mensajes visualmente.
+
+image::../images/crypto-prices-vscode.png[Precios de criptomonedas en VS Code,800,600]
+
+La extensión de VS Code proporciona:
+
+*   **Visualización de mensajes en tiempo real** con resaltado de sintaxis.
+*   **Integración con esquemas AVRO** para una deserialización correcta.
+*   Capacidades de **filtrado y búsqueda de mensajes**.
+*   **Gestión de offsets** a través de la interfaz de usuario.
+*   **Monitoreo de grupos de consumidores** con métricas de lag.
+
+== ✅ Lista de Verificación
+
+Antes de pasar a la siguiente sección, asegúrate de que:
+
+- [ ] Se han creado tres tópicos con diferentes configuraciones.
+- [ ] El Conector de Origen HTTP se ha desplegado usando `./deploy-connector.sh`.
+- [ ] El estado del conector se ha validado usando `./validate-connector.sh`.
+- [ ] Los datos de criptomonedas en tiempo real fluyen hacia el tópico `crypto-prices`.
+- [ ] Has consumido mensajes exitosamente usando la Extensión de Confluent para VS Code.
+- [ ] El consumo visual de datos funciona con la deserialización AVRO correcta.
+- [ ] Las variables de entorno están configuradas correctamente en el archivo `.env`.
+
+== 🔧 Entregables Clave
+
+Al final de esta sección, deberías tener:
+
+*   **Múltiples tópicos** con diferentes políticas de retención y limpieza.
+*   Un **Conector de Origen HTTP** que transmite datos de precios de CoinGecko en vivo cada 60 segundos en formato AVRO.
+*   **Grupos de consumidores** que consumen activamente datos de criptomonedas en tiempo real.
+*   **Comprensión** de la ingesta de datos basada en conectores y la gestión de offsets.
+
+== 🚨 Solución de Problemas
+
+=== Problemas con el Conector
+
+**El conector no se inicia**::
+[source,bash]
+----
+# Usa el script de validación para comprobar el estado del conector
+./validate-connector.sh
+
+# Problemas comunes:
+# - Clave/secreto de API inválidos en el archivo .env
+# - Conectividad de red
+# - Limitación de tasa (rate limiting) por parte de la API de CoinGecko
+# - Variables de entorno faltantes
+----
+
+**No fluyen datos**::
+[source,bash]
+----
+# Comprueba el estado del conector usando el script
+./validate-connector.sh
+
+# Verifica que el tópico existe y tiene los permisos correctos
+confluent kafka topic describe crypto-prices
+
+# Comprueba si el archivo .env está configurado correctamente
+source .env && echo "KAFKA_API_KEY: $KAFKA_API_KEY"
+----
+
+== 📚 Recursos Adicionales
+
+* https://docs.confluent.io/cloud/current/connectors/cc-http-source.html[Documentación del Conector de Origen HTTP]
+* https://docs.confluent.io/confluent-cli/current/command-reference/kafka/topic/[Referencia del CLI para Tópicos de Kafka]
+* https://www.coingecko.com/en/api/documentation[Documentación de la API de CoinGecko]
+
+---
+
+**Siguiente**: Procede a link:03-tableflow-iceberg-setup.adoc[] para la materialización con Tableflow y la integración con DuckDB.

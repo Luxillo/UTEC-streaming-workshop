@@ -1,5 +1,5 @@
 {
-  "name": "Confluent Cloud Workshop",
+  "name": "UTEC-Confluent-Cloud-Workshop",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
   
   "features": {
