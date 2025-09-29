@@ -39,10 +39,10 @@ toc::[]
 
 == Resumen del taller
 
-Este taller práctico de 2 horas introduce a los desarrolladores a la creación de pipelines de datos en tiempo real con Confluent Cloud.
+Este taller práctico de 2.5 horas introduce a los desarrolladores  y arquitectos a los conceptos y procesos de creación de pipelines de datos en tiempo real con Confluent Cloud.
 
 Aprenderás a transmitir datos con Apache Kafka, procesarlos en tiempo real con Apache Flink y convertirlos en tablas Apache Iceberg usando Tableflow.
-El taller presupone conocimientos básicos de programación y ofrece una guía paso a paso.
+El taller presupone conocimientos básicos de programación y ofrece una guía paso a paso a traves de ormatos legible y comandos reproducibles.
 
 == Qué aprenderás
 
@@ -52,7 +52,7 @@ El taller presupone conocimientos básicos de programación y ofrece una guía p
 
 == Requisitos previos
 
-* *Cuenta de GitHub*: Necesaria para acceder a GitHub Codespaces o clonar el repositorio del taller.
+* *Cuenta de GitHub*: Necesaria para acceder a GitHub Codespaces y/o clonar el repositorio del taller.
 ** https://github.com/join[Crea una cuenta gratuita de GitHub] si no tienes una
 * *VSCode con extensión de Confluent*: Para gestionar recursos de Confluent Cloud. ** https://docs.confluent.io/cloud/current/client-apps/vs-code-extension.html[https://docs.confluent.io/cloud/current/client-apps/vs-code-extension.html]
 * *Confluent CLI*: Para interactuar con clústeres y temas de Kafka.
@@ -77,8 +77,8 @@ El taller presupone conocimientos básicos de programación y ofrece una guía p
 |===
 |*Segmento*|*Duración*|*Características cubiertas*|*Objetivo*
 
-|Introducción|15 min|Descripción general de Kafka, Flink y Tableflow|Comprender la arquitectura basada en eventos
-|Configuración de Confluent Cloud|15 min|Creación de clústeres de Kafka|Configurar un clúster de Kafka administrado
+|Introducción|20 min|Descripción general de Kafka, Flink y Tableflow|Comprender la arquitectura basada en eventos
+|Configuración de Confluent Cloud|25 min|Creación de clústeres de Kafka|Configurar un clúster de Kafka administrado via CLI
 |Práctica con Kafka|30 min|Kafka Temas, Productores, Consumidores | Transmite datos con Kafka
 |Flink Práctica | 45 min | Procesamiento de flujos de Flink | Procesa datos en tiempo real
 |Tableflow Práctica | 30 min | Tableflow, Iceberg, DuckDB | Materializa y consulta datos listos para análisis

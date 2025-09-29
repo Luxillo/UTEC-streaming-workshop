@@ -1,0 +1,260 @@
+= Explicación de los Comandos de Setup de Confluent Cloud
+
+Este documento explica cada uno de los comandos que se ejecutan durante el setup de Confluent Cloud como se describe en la guía `1-setup-confluent-cloud.adoc`.
+
+== 🔍 Validación de prerrequisitos
+
+=== Verificar la extensión Confluent de VSCode
+
+[source,bash]
+----
+code --list-extensions | grep confluent
+----
+
+* `code --list-extensions`: Este comando lista todas las extensiones instaladas en Visual Studio Code.
+* `|`: Este es un "pipe". Envía la salida del comando anterior (`code --list-extensions`) como entrada al siguiente comando.
+* `grep confluent`: Este comando busca en la entrada (la lista de extensiones) cualquier línea que contenga la palabra "confluent".
+
+En resumen, este comando comprueba si la extensión de Confluent para VS Code está instalada.
+
+=== Verificar la instalación de la CLI de Confluent
+
+[source,bash]
+----
+confluent version
+----
+
+* `confluent version`: Este comando muestra la versión de la CLI de Confluent instalada, junto con otra información de compilación. Se utiliza para verificar que la CLI esté instalada y sea accesible desde la línea de comandos.
+
+[source,bash]
+----
+curl -sL --http1.1 https://cnfl.io/cli | sh -s -- latest
+----
+
+* `curl -sL --http1.1 https://cnfl.io/cli`: `curl` es una herramienta para transferir datos desde o hacia un servidor.
+    * `-sL`: `-s` significa "silencioso" (no muestra la barra de progreso) y `-L` sigue las redirecciones.
+    * `--http1.1`: Fuerza el uso de HTTP/1.1.
+    * `https://cnfl.io/cli`: Esta es la URL del script de instalación de la CLI de Confluent.
+* `|`: El "pipe" envía el contenido del script de instalación al siguiente comando.
+* `sh -s -- latest`: `sh` es el shell que ejecuta el script.
+    * `-s`: Lee el script de la entrada estándar (la salida de `curl`).
+    * `-- latest`: Es un argumento para el script de instalación, que le dice que instale la última versión de la CLI.
+
+En resumen, este comando descarga y ejecuta el script para instalar la última versión de la CLI de Confluent.
+
+=== Validar la instalación de DuckDB
+
+[source,bash]
+----
+duckdb --version
+----
+
+* `duckdb --version`: Este comando muestra la versión de DuckDB instalada. Se utiliza para verificar que DuckDB esté instalado y funcionando.
+
+== 🌍 Autenticación y configuración del entorno
+
+=== Iniciar sesión en Confluent Cloud
+
+[source,bash]
+----
+confluent login --save
+----
+
+* `confluent login`: Este es el comando principal para iniciar sesión en Confluent Cloud.
+* `--save`: Esta opción guarda las credenciales de autenticación en un archivo local (`~/.confluent/config.json`), para que no tengas que volver a iniciar sesión en cada sesión. El comando abrirá un navegador para completar el proceso de autenticación.
+
+=== Crear o seleccionar organización
+
+[source,bash]
+----
+confluent organization list
+----
+
+* `confluent organization list`: Este comando lista todas las organizaciones de Confluent Cloud a las que tienes acceso.
+
+=== Crear el entorno del taller
+
+[source,bash]
+----
+confluent environment create "cc-workshop-env"
+----
+
+* `confluent environment create "cc-workshop-env"`: Este comando crea un nuevo entorno en Confluent Cloud con el nombre "cc-workshop-env". Los entornos son una forma de organizar los recursos de Confluent Cloud.
+
+[source,bash]
+----
+confluent environment list
+----
+
+* `confluent environment list`: Este comando lista todos los entornos en tu organización de Confluent Cloud.
+
+[source,bash]
+----
+confluent environment use $CC_ENV_ID
+----
+
+* `confluent environment use`: Este comando establece un entorno como el activo para los siguientes comandos.
+* `$CC_ENV_ID`: Esta es una variable de entorno que debe contener el ID del entorno que se va a utilizar. El ID se puede obtener de la salida de `confluent environment list`.
+
+== ☁️ Creación de clúster de Kafka
+
+=== Crear Kafka básico Clúster
+
+[source,bash]
+----
+confluent kafka cluster create workshop-cluster \
+--cloud aws \
+--region us-east-1 \
+--type basic
+----
+
+* `confluent kafka cluster create workshop-cluster`: Este comando crea un nuevo clúster de Kafka con el nombre "workshop-cluster".
+* `\`: La barra invertida se utiliza para dividir un comando largo en varias líneas para facilitar la lectura.
+* `--cloud aws`: Especifica que el clúster se debe crear en Amazon Web Services (AWS).
+* `--region us-east-1`: Especifica la región de AWS donde se creará el clúster.
+* `--type basic`: Especifica que se debe crear un clúster de tipo "Básico", que es un tipo de clúster de bajo costo adecuado para desarrollo y pruebas.
+
+=== Configurar los ajustes del clúster
+
+[source,bash]
+----
+confluent kafka cluster list
+----
+
+* `confluent kafka cluster list`: Este comando lista todos los clústeres de Kafka en el entorno activo.
+
+[source,bash]
+----
+confluent kafka cluster use $CC_KAFKA_CLUSTER
+----
+
+* `confluent kafka cluster use`: Este comando establece un clúster de Kafka como el activo para los siguientes comandos.
+* `$CC_KAFKA_CLUSTER`: Esta es una variable de entorno que debe contener el ID del clúster de Kafka que se va a utilizar.
+
+[source,bash]
+----
+confluent kafka cluster describe $CC_KAFKA_CLUSTER
+----
+
+* `confluent kafka cluster describe`: Este comando muestra información detallada sobre un clúster de Kafka específico.
+* `$CC_KAFKA_CLUSTER`: La variable de entorno que contiene el ID del clúster.
+
+=== Generar claves API
+
+==== Claves API del clúster de Kafka
+
+[source,bash]
+----
+confluent api-key create --resource $CC_KAFKA_CLUSTER --description "Clave API del taller para el clúster de Kafka"
+----
+
+* `confluent api-key create`: Este comando crea una nueva clave API.
+* `--resource $CC_KAFKA_CLUSTER`: Especifica que la clave API es para el clúster de Kafka definido en la variable `$CC_KAFKA_CLUSTER`.
+* `--description "..."`: Proporciona una descripción para la clave API.
+
+[source,bash]
+----
+confluent api-key use $KAFKA_API_KEY --resource $CC_KAFKA_CLUSTER
+----
+
+* `confluent api-key use`: Este comando establece una clave API como la activa para un recurso específico.
+* `$KAFKA_API_KEY`: La variable de entorno que contiene la clave API.
+* `--resource $CC_KAFKA_CLUSTER`: El recurso para el cual se usará la clave API.
+
+==== API del registro de esquemas Claves
+
+[source,bash]
+----
+confluent schema-registry cluster describe
+----
+
+* `confluent schema-registry cluster describe`: Este comando describe el clúster de Schema Registry asociado con el entorno actual y devuelve su ID.
+
+[source,bash]
+----
+confluent api-key create --resource $SCHEMA_REGISTRY_CLUSTER_ID --description "Clave API de taller para el Registro de Esquemas"
+----
+
+* `confluent api-key create`: Crea una nueva clave de API.
+* `--resource $SCHEMA_REGISTRY_CLUSTER_ID`: Especifica que la clave es para el clúster de Schema Registry.
+* `--description "..."`: Proporciona una descripción.
+
+==== API de Tableflow Claves
+
+[source,bash]
+----
+confluent api-key create --resource tableflow --description "Clave API de taller para Tableflow"
+----
+
+* `confluent api-key create`: Crea una nueva clave de API.
+* `--resource tableflow`: Especifica que la clave es para el recurso "tableflow".
+* `--description "..."`: Proporciona una descripción.
+
+[source,bash]
+----
+confluent tableflow topic list
+----
+
+* `confluent tableflow topic list`: Este comando lista los topics en Tableflow. Se usa aquí para probar que la clave de API de Tableflow funciona.
+
+==== Almacenar claves API en el archivo de entorno
+
+[source,bash]
+----
+cd ./scripts/kafka
+----
+
+* `cd ./scripts/kafka`: Cambia el directorio de trabajo actual a `./scripts/kafka`.
+
+[source,bash]
+----
+cp .env.example .env
+----
+
+* `cp .env.example .env`: Copia el archivo `.env.example` a un nuevo archivo llamado `.env`. El archivo `.env` se usará para almacenar las claves de API.
+
+[source,bash]
+----
+source .env
+----
+
+* `source .env`: Este comando lee y ejecuta los comandos del archivo `.env` en el shell actual. Esto carga las variables de entorno (las claves de API) en la sesión actual del terminal.
+
+=== Validar la conectividad del clúster
+
+[source,bash]
+----
+confluent kafka topic list
+----
+
+* `confluent kafka topic list`: Este comando lista todos los topics en el clúster de Kafka activo. Se utiliza para verificar que la conexión con el clúster funciona correctamente utilizando la clave de API configurada.
+
+== 🚨 Solución de problemas
+
+[source,bash]
+----
+confluent login --save --no-browser
+----
+
+* `confluent login --save --no-browser`: Inicia el proceso de inicio de sesión pero no intenta abrir un navegador web. En su lugar, muestra una URL en la consola que el usuario debe abrir manualmente para autenticarse.
+
+[source,bash]
+----
+confluent service-quota list organization
+----
+
+* `confluent service-quota list organization`: Muestra las cuotas de servicio para la organización, como el número de clústeres que se pueden crear.
+
+[source,bash]
+----
+confluent api-key list
+----
+
+* `confluent api-key list`: Lista todas las claves de API que ha creado.
+
+[source,bash]
+----
+confluent api-key delete <key-id>
+----
+
+* `confluent api-key delete <key-id>`: Elimina una clave de API específica.

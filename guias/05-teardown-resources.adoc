@@ -1,0 +1,460 @@
+= 🧹 Guía de Desmontaje del Taller - Prevenir Cargos Accidentales (15 minutos)
+Luis Chavez <lachavez.olaya@gmail.com>, 2025
+2025-09-11
+:revdate: 2025-09-11
+:linkattrs:
+:ast: &ast;
+:y: &#10003;
+:n: &#10008;
+:y: icon:check-sign[role="green"]
+:n: icon:check-minus[role="red"]
+:c: icon:file-text-alt[role="blue"]
+:toc: auto
+:toc-placement: auto
+:toc-position: auto
+:toc-title: Contenido de la Guía de Desmontaje
+:toclevels: 3
+:idprefix:
+:idseparator: -
+:sectanchors:
+:icons: font
+:source-highlighter: highlight.js
+:highlightjs-theme: idea
+:experimental:
+
+[IMPORTANT]
+====
+🚨 **CRÍTICO**: Esta guía te ayuda a limpiar adecuadamente todos los recursos de Confluent Cloud creados durante el taller para **prevenir cargos inesperados**.
+
+**Ejecuta estos pasos inmediatamente después de completar el taller** para evitar costos continuos de los pools de cómputo de Flink, las integraciones de catálogo de Tableflow y otros recursos facturables.
+====
+
+Esta guía proporciona instrucciones paso a paso para desmontar de forma segura todos los recursos del taller y evitar facturación accidental.
+
+toc::[]
+
+== 🎯 Objetivos del Desmontaje
+
+Al final de este proceso de desmontaje, habrás:
+
+* ✅ Detenido todas las aplicaciones y pools de cómputo de Flink en ejecución.
+* ✅ Eliminado las integraciones de catálogo de Tableflow y las tablas materializadas.
+* ✅ Eliminado los Conectores de Origen HTTP (HTTP Source Connectors).
+* ✅ Limpiado las claves de API y las credenciales de acceso.
+* ✅ Eliminado los tópicos y el clúster de Kafka (opcional).
+* ✅ Eliminado el entorno del taller (opcional).
+* ✅ Verificado que no haya cargos en curso.
+
+== ⏱️ Distribución del Tiempo
+
+* **Limpieza de Alta Prioridad (Crítica para los Costos)**: 8 minutos
+* **Limpieza de Recursos Estándar**: 5 minutos
+* **Verificación Final**: 2 minutos
+
+== 🚨 Limpieza de Alta Prioridad - Detener la Facturación Inmediatamente (8 minutos)
+
+Estos recursos generan los costos más altos y deben ser eliminados **primero e inmediatamente**:
+
+=== Detener Todas las Aplicaciones y Pools de Cómputo de Flink
+
+[source,bash]
+----
+# 1. Listar y detener todas las sentencias/aplicaciones de Flink en ejecución
+confluent flink statement list
+
+# Detener cada sentencia en ejecución (reemplaza STATEMENT_ID con los IDs reales)
+confluent flink statement stop $FLINK_STATEMENT_ID
+
+# Eliminar todas las sentencias de Flink
+confluent flink statement delete $FLINK_STATEMENT_ID
+
+# 2. Detener y eliminar los pools de cómputo de Flink
+confluent flink compute-pool list
+
+# Eliminar el pool de cómputo
+confluent flink compute-pool delete --force $FLINK_POOL_ID
+----
+
+[WARNING]
+====
+**Los pools de cómputo de Flink cobran por CFU-horas incluso cuando están inactivos**. Eliminarlos inmediatamente detiene todos los cargos.
+====
+
+=== Eliminar Recursos de Tableflow
+
+[source,bash]
+----
+# Cargar variables de entorno
+cd ./scripts/kafka
+source .env
+
+# 1. Deshabilitar Tableflow para todos los tópicos del taller
+confluent tableflow topic disable crypto-prices --force --cluster $CC_KAFKA_CLUSTER
+confluent tableflow topic disable price-alerts --force --cluster $CC_KAFKA_CLUSTER
+confluent tableflow topic disable crypto-trends --force --cluster $CC_KAFKA_CLUSTER
+confluent tableflow topic disable crypto-prices-exploded --force --cluster $CC_KAFKA_CLUSTER
+
+# 2. Listar y verificar que los tópicos de Tableflow están deshabilitados
+confluent tableflow topic list --cluster $CC_KAFKA_CLUSTER
+
+# 3. Eliminar las claves de API de Tableflow si fueron creadas
+confluent api-key list
+confluent api-key delete --force $TABLEFLOW_API_KEY
+----
+
+[WARNING]
+====
+**Las integraciones de catálogo de Tableflow incurren en costos de almacenamiento y cómputo**. Elimínalas inmediatamente después de detener la materialización.
+====
+
+=== Verificar la Eliminación de Recursos de Alta Prioridad
+
+[source,bash]
+----
+# Verificar que los recursos de Flink han sido eliminados
+confluent flink compute-pool list
+confluent flink statement list
+
+# Verificar que los recursos de Tableflow han sido eliminados
+confluent tableflow topic list
+
+# Salida esperada: Listas vacías o "No resources found"
+----
+
+== 🧹 Limpieza de Recursos Estándar (5 minutos)
+
+Después de detener los recursos de alto costo, limpia los componentes restantes:
+
+=== Eliminar Conectores
+
+[source,bash]
+----
+# Cargar variables de entorno
+cd ./scripts/kafka
+source .env
+
+# Listar todos los conectores
+confluent connect cluster list
+confluent connect cluster list --cluster $CC_KAFKA_CLUSTER
+
+# Eliminar el conector de origen HTTP
+confluent connect cluster delete --cluster $CC_CONNECT_CLUSTER
+
+# Verificar eliminación
+confluent connect cluster list --cluster $CC_KAFKA_CLUSTER
+----
+
+=== Limpiar Claves de API
+
+[source,bash]
+----
+# Listar todas las claves de API en el entorno
+confluent api-key list
+
+# Eliminar las claves de API relacionadas con el taller (conserva solo las que necesites)
+confluent api-key delete $KAFKA_API_KEY
+confluent api-key delete $SCHEMA_REGISTRY_API_KEY
+
+# Verificar las claves restantes
+confluent api-key list
+----
+
+=== Eliminar Tópicos de Kafka (Opcional)
+
+[CAUTION]
+====
+[source,bash]
+----
+# Cargar variables de entorno
+cd ./scripts/kafka
+source .env
+
+# Eliminar todos los tópicos del taller
+confluent kafka topic delete crypto-prices --cluster $CC_KAFKA_CLUSTER
+confluent kafka topic delete price-alerts --cluster $CC_KAFKA_CLUSTER
+confluent kafka topic delete crypto-prices-exploded --cluster $CC_KAFKA_CLUSTER
+confluent kafka topic delete crypto-trends --cluster $CC_KAFKA_CLUSTER
+confluent kafka topic delete latest-prices --cluster $CC_KAFKA_CLUSTER
+
+# Verificar eliminación
+confluent kafka topic list --cluster $CC_KAFKA_CLUSTER
+----
+====
+
+=== Eliminar Clúster de Kafka (Opcional)
+
+[NOTE]
+====
+**Los clústeres Básicos son gratuitos**, pero puedes querer eliminarlos por organización. **Los clústeres Estándar/Dedicados incurren en cargos**.
+====
+
+[source,bash]
+----
+# Primero, verificar el tipo de clúster
+confluent kafka cluster describe $CC_KAFKA_CLUSTER
+
+# Si es un clúster Estándar o Dedicado, elimínalo inmediatamente:
+confluent kafka cluster delete $CC_KAFKA_CLUSTER
+
+# Para clústeres Básicos (limpieza opcional):
+confluent kafka cluster delete $CC_KAFKA_CLUSTER
+----
+
+== 🗂️ Limpieza del Entorno (Opcional)
+
+=== Eliminar Entorno del Taller
+
+[CAUTION]
+====
+**Eliminación del Entorno**: Esto elimina todo el entorno y todos los recursos contenidos. Solo haz esto si creaste un entorno dedicado para el taller.
+====
+
+[source,bash]
+----
+# Listar entornos
+confluent environment list
+
+# Cambiar a un entorno diferente primero (usa tu entorno predeterminado)
+confluent environment use <OTHER_ENV_ID>
+
+# Eliminar el entorno del taller
+confluent environment delete $CC_ENV_ID
+
+# Verificar eliminación
+confluent environment list
+----
+
+== ✅ Verificación Final y Monitoreo de Costos (2 minutos)
+
+=== Verificar que Todos los Recursos Fueron Eliminados
+
+[TIP]
+====
+**Validación Rápida**: Usa el script de validación automatizado para una revisión completa de los recursos:
+[source,bash]
+----
+# Ejecutar el script de validación automatizado
+./scripts/setup/validate-teardown.sh
+----
+Este script proporciona una salida con colores, un análisis detallado de los recursos y una evaluación del impacto en los costos.
+====
+
+**Verificación Manual** (si es necesario):
+
+[source,bash]
+----
+# Comprobar si quedan recursos facturables
+echo "🔍 Comprobando recursos facturables restantes..."
+
+# Recursos de Flink (debería estar vacío)
+echo "Pools de Cómputo de Flink:"
+confluent flink compute-pool list
+
+echo "Sentencias de Flink:"
+confluent flink statement list
+
+# Recursos de Tableflow (debería estar vacío)
+echo "Integraciones de Catálogo de Tableflow:"
+confluent tableflow catalog-integration list
+
+echo "Tópicos de Tableflow:"
+confluent tableflow topic list
+
+# Conectores (debería estar vacío o solo conectores no relacionados con el taller)
+echo "Conectores:"
+confluent connect connector list
+
+# Clústeres (los clústeres Básicos son gratuitos, pero verifica si hay Estándar/Dedicados)
+echo "Clústeres de Kafka:"
+confluent kafka cluster list
+----
+
+=== Monitorear el Panel de Facturación
+
+[source,bash]
+----
+# Abrir la Consola de Confluent Cloud para verificar la facturación
+echo "🌐 Por favor, verifica en la Consola de Confluent Cloud:"
+echo "1. Ve a: https://confluent.cloud"
+echo "2. Navega a: Billing & Payment → Usage"
+echo "3. Verifica: No hay cargos activos de Flink o Tableflow"
+echo "4. Comprueba: Solo queda el clúster Básico (gratuito) o los recursos esperados"
+----
+
+== 💰 Mejores Prácticas para la Prevención de Costos
+
+=== Acciones Inmediatas Después del Taller
+
+1. **Configura alertas de facturación** en la Consola de Confluent Cloud.
+2. **Revisa el uso diariamente** durante la primera semana después del taller.
+3. **Elimina entornos no utilizados** regularmente.
+4. **Monitorea el uso de claves de API** y elimina las que no se usen.
+
+=== Gestión Continua de Costos
+
+[TIP]
+====
+**Usa el script de validación regularmente** para monitorear tus recursos de Confluent Cloud:
+[source,bash]
+----
+# Realizar revisiones de costos semanales
+./scripts/validate-teardown.sh
+----
+====
+
+== 🚨 Script de Limpieza de Emergencia
+
+Si necesitas eliminar todo rápidamente:
+
+[source,bash]
+----
+# Script de limpieza de emergencia - ÚSALO CON PRECAUCIÓN
+cat > ~/emergency-cleanup.sh << 'EOF'
+#!/bin/bash
+
+echo "🚨 LIMPIEZA DE EMERGENCIA DE CONFLUENT CLOUD"
+echo "¡Esto eliminará TODOS los recursos del taller!"
+read -p "Estás seguro? Escribe 'DELETE' para continuar: " confirm
+
+if [ "$confirm" != "DELETE" ]; then
+    echo "Limpieza cancelada."
+    exit 1
+fi
+
+echo "🧹 Iniciando limpieza de emergencia..."
+
+# Detener y eliminar todos los recursos de Flink
+echo "Limpiando recursos de Flink..."
+for statement in $(confluent flink statement list --output json | jq -r '.[].name' 2>/dev/null); do
+    confluent flink statement delete "$statement" --force
+done
+
+for pool in $(confluent flink compute-pool list --output json | jq -r '.[].id' 2>/dev/null); do
+    confluent flink compute-pool delete "$pool" --force
+done
+
+# Eliminar todos los recursos de Tableflow
+echo "Limpiando recursos de Tableflow..."
+for topic in $(confluent tableflow topic list --output json | jq -r '.[].name' 2>/dev/null); do
+    confluent tableflow topic delete "$topic" --force
+done
+
+for catalog in $(confluent tableflow catalog-integration list --output json | jq -r '.[].id' 2>/dev/null); do
+    confluent tableflow catalog-integration delete "$catalog" --force
+done
+
+# Eliminar conectores
+echo "Limpiando conectores..."
+for connector in $(confluent connect connector list --output json | jq -r '.[].name' 2>/dev/null); do
+    confluent connect connector delete "$connector"
+done
+
+echo "✅ ¡Limpieza de emergencia completada!"
+echo "🌐 Por favor, verifica en la Consola de Confluent Cloud que todos los recursos han sido eliminados."
+EOF
+
+chmod +x ~/emergency-cleanup.sh
+----
+
+== 📋 Lista de Verificación del Desmontaje
+
+Antes de considerar el desmontaje completo, verifica:
+
+**Alta Prioridad (Crítica para los Costos)**:
+- [ ] Todos los pools de cómputo de Flink eliminados
+- [ ] Todas las aplicaciones/sentencias de Flink detenidas y eliminadas
+- [ ] Todas las integraciones de catálogo de Tableflow eliminadas
+- [ ] Todas las tablas materializadas de Tableflow eliminadas
+
+**Limpieza Estándar**:
+- [ ] Conectores de Origen HTTP eliminados
+- [ ] Claves de API del taller eliminadas
+- [ ] Tópicos del taller eliminados (si se desea)
+- [ ] Clúster de Kafka eliminado (si es de nivel Estándar/Dedicado)
+
+**Verificación**:
+- [ ] El panel de facturación no muestra cargos inesperados
+- [ ] El script de monitoreo de costos se ejecuta sin problemas
+- [ ] Se confirma la eliminación de todos los recursos del taller
+
+== 🔧 Solución de Problemas de Desmontaje
+
+=== No se puede eliminar el Pool de Cómputo de Flink
+
+[source,bash]
+----
+# Forzar la detención de todas las aplicaciones primero
+confluent flink statement list
+confluent flink statement stop <STATEMENT_ID> --force
+
+# Esperar unos minutos, luego intentar eliminar el pool
+confluent flink compute-pool delete <POOL_ID> --force
+----
+
+=== No se puede eliminar la Integración de Catálogo de Tableflow
+
+[source,bash]
+----
+# Eliminar todas las tablas materializadas primero
+confluent tableflow topic list
+confluent tableflow topic delete <TABLE_NAME> --force
+
+# Eliminar claves de API
+confluent tableflow api-key list
+confluent tableflow api-key delete <API_KEY>
+
+# Luego eliminar la integración de catálogo
+confluent tableflow catalog-integration delete <CATALOG_ID> --force
+----
+
+=== Falla la Eliminación del Conector
+
+[source,bash]
+----
+# Verificar el estado del conector
+confluent connect connector describe <CONNECTOR_NAME>
+
+# Forzar la eliminación si está atascado
+confluent connect connector delete <CONNECTOR_NAME> --force
+
+# Si sigue fallando, contacta al soporte con el ID del conector
+----
+
+=== Aparecen Cargos Inesperados
+
+1. **Ejecuta inmediatamente el script de limpieza de emergencia**
+2. **Revisa la sección de facturación en la Consola de Confluent Cloud**
+3. **Contacta al Soporte de Confluent** con tu ID de organización
+4. **Documenta todos los recursos** que crees que deberían ser eliminados
+
+== 📞 Soporte y Recursos
+
+=== Obtener Ayuda
+
+* **Consola de Confluent Cloud**: https://confluent.cloud/settings/billing
+* **Soporte de Confluent**: https://support.confluent.io
+* **Slack de la Comunidad**: https://confluentcommunity.slack.com
+
+=== Recursos de Estimación de Costos
+
+* **Precios de Confluent Cloud**: https://www.confluent.io/confluent-cloud/pricing/
+* **Calculadora de Precios de Flink**: Disponible en la Consola de Confluent Cloud
+* **Precios de Tableflow**: Basado en el uso de almacenamiento y cómputo
+
+== 📚 Recursos Adicionales
+
+* https://docs.confluent.io/cloud/current/billing/overview.html[Resumen de Facturación de Confluent Cloud]
+* https://docs.confluent.io/confluent-cli/current/command-reference/[Referencia del CLI de Confluent]
+* https://docs.confluent.io/cloud/current/flink/[Flink para Confluent Cloud]
+* https://docs.confluent.io/cloud/current/tableflow/[Documentación de Tableflow]
+
+---
+
+[IMPORTANT]
+====
+🎉 **¡Taller Completado!**
+
+Has completado con éxito el taller de Confluent Cloud y has limpiado adecuadamente todos los recursos.
+
+**Recuerda**: Siempre ejecuta este proceso de desmontaje después de cualquier experimentación en Confluent Cloud para prevenir cargos inesperados.
+====
