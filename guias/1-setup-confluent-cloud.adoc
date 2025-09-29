@@ -1,0 +1,318 @@
+🔐 Configuración de Confluent Cloud (15 minutos)
+Viktor Gamov <vgamov@confluent.io>, © 2025 Confluent, Inc.
+2025-09-11
+:revdate: 2025-09-11
+:linkattrs:
+:ast: &ast;
+:y: &#10003;
+:n: &#10008;
+:y: icon:check-sign[role="green"]
+:n: icon:check-minus[role="red"]
+:c: icon:file-text-alt[role="blue"]
+:toc: auto
+:toc-placement: auto
+:toc-position: auto
+:toc-title: Contenido de la guía de configuración
+:toclevels: 3
+:idprefix:
+:idseparator: -
+:sectanchors:
+:icons: font
+:source-highlighter: highlight.js
+:highlightjs-theme: idea
+:experimental:
+
+Esta guía le guiará en la configuración de su entorno de Confluent Cloud para el taller.
+
+toc::[]
+
+== 🎯 Objetivos de aprendizaje
+
+Al finalizar esta sección, habrás:
+
+* ✅ Validado que todas las herramientas prerrequisito estén instaladas
+* ✅ Autenticado con Confluent Cloud
+* ✅ Creado un clúster de Kafka funcional
+* ✅ Generado claves API para el acceso al clúster
+* ✅ Validado el acceso a Tableflow con las credenciales existentes
+
+== ⏱️ Asignación de tiempo
+
+* **Validación de prerrequisitos**: 3 minutos
+* **Autenticación y configuración del entorno**: 7 minutos
+* **Creación de clúster de Kafka**: 5 minutos
+* **Validación de Tableflow**: 2 minutos
+
+== 🔍 Validación de prerrequisitos (3 minutos)
+
+=== Verificar la extensión Confluent de VSCode
+
+Abrir VSCode
+
+Vayan a Extensiones (Ctrl+Shift+X / Cmd+Shift+X)
+
+Buscar "Confluent"
+
+Verificar que la extensión Confluent esté instalada y habilitada
+
+[source,bash]
+----
+# Alternativa: Comprobar si la extensión está instalada mediante la CLI
+code --list-extensions | grep confluent
+----
+
+=== Verificar la instalación de la CLI de Confluent
+
+[source,bash]
+----
+# Comprobar la instalación y la versión de la CLI
+confluent version
+
+# El resultado esperado debería mostrar la versión 3.x o superior
+# confluent - Confluent CLI
+# Versión: v3.x.x
+# Referencia de Git: xxxxxxx
+# Fecha de compilación: 2024-xx-xx
+----
+
+Si no está instalada, ejecutar:
+[source,bash]
+----
+# Instalar la CLI de Confluent
+curl -sL --http1.1 https://cnfl.io/cli | sh -s -- latest
+----
+
+=== Validar la instalación de DuckDB
+
+[source,bash]
+----
+# Verificar la instalación de DuckDB
+duckdb --version
+
+# Salida esperada: v0.x.x o superior
+----
+
+Si no está instalado, visite: https://duckdb.org/docs/installation/
+
+== 🌍 Autenticación y configuración del entorno (7 minutos)
+
+=== Iniciar sesión en Confluent Cloud
+
+[source,bash]
+----
+# Iniciar sesión en Confluent Cloud
+confluent login --save
+
+# Esto abrirá su navegador para la autenticación
+# Complete el proceso de inicio de sesión en su navegador
+----
+
+=== Crear o seleccionar organización
+
+[source,bash]
+----
+# Listar las organizaciones disponibles
+confluent organization list
+----
+
+=== Crear el entorno del taller
+
+[source,bash]
+----
+# Crear un nuevo entorno para el taller
+confluent environment create "cc-workshop-env"
+
+# Listar los entornos para ver su nuevo entorno
+confluent environment list
+
+# Usar el entorno del taller (reemplazar $CC_ENV_ID con el ID real)
+# export CC_ENV_ID=<your-env-id>
+confluent environment use $CC_ENV_ID
+----
+
+== ☁️ Creación de clúster de Kafka (5 minutos)
+
+=== Crear Kafka básico Clúster
+
+[source,bash]
+----
+# Crear un clúster básico (ideal para desarrollo/taller)
+confluent kafka cluster create workshop-cluster \
+--cloud aws \
+--region us-east-1 \
+--type basic
+----
+
+NOTA: Los clústeres básicos son gratuitos y perfectos para talleres.
+Tienen algunas limitaciones, pero son suficientes para nuestro caso de uso.
+
+=== Configurar los ajustes del clúster
+
+[source,bash]
+----
+# Listar clústeres para obtener el ID del clúster
+confluent kafka cluster list
+
+# Usar el clúster (reemplazar CLUSTER_ID con el ID real)
+# export CC_KAFKA_CLUSTER=<your-cluster-id>
+confluent kafka cluster use $CC_KAFKA_CLUSTER
+
+# Describir el clúster para verificar la configuración
+confluent kafka cluster describe $CC_KAFKA_CLUSTER
+----
+
+=== Generar claves API
+
+==== Claves API del clúster de Kafka
+
+[source,bash]
+----
+# Crear clave API para el acceso al clúster
+confluent api-key create --resource $CC_KAFKA_CLUSTER --description "Clave API del taller para el clúster de Kafka"
+
+# Almacenar la clave API y el secreto; los necesitará más adelante
+# Clave API: <your-kafka-api-key>
+# Secreto API: <your-kafka-api-secret>
+
+# Usar la clave API
+# export KAFKA_API_KEY=<your-kafka-api-key>
+# export KAFKA_API_SECRET=<your-kafka-api-secret>
+confluent api-key use $KAFKA_API_KEY --resource $CC_KAFKA_CLUSTER
+----
+
+==== API del registro de esquemas Claves
+
+[source,bash]
+----
+# Obtener el ID del clúster del Registro de Esquemas
+confluent schema-registry cluster describe
+
+# Crear la clave API para acceder al Registro de Esquemas
+# export SCHEMA_REGISTRY_CLUSTER_ID=<your-sr-cluster-id>
+confluent api-key create --resource $SCHEMA_REGISTRY_CLUSTER_ID --description "Clave API de taller para el Registro de Esquemas"
+
+# Almacenar la clave API y el secreto del Registro de Esquemas
+# Clave API del Registro de Esquemas: <your-sr-api-key>
+# Secreto API del Registro de Esquemas: <your-sr-api-secret>
+
+# Usar la clave API del Registro de Esquemas
+# export SCHEMA_REGISTRY_API_KEY=<your-sr-api-key>
+# export SCHEMA_REGISTRY_API_SECRET=<your-sr-api-secret>
+----
+
+==== API de Tableflow Claves
+
+[source,bash]
+----
+# Crear clave API para acceder a Tableflow
+confluent api-key create --resource tableflow --description "Clave API de taller para Tableflow"
+
+# Almacenar la clave API y el secreto de Tableflow
+# Clave API de Tableflow: <your-tableflow-api-key>
+# Secreto API de Tableflow: <your-tableflow-api-secret>
+
+# Usar la clave API de Tableflow
+# export TABLEFLOW_API_KEY=<your-tableflow-api-key>
+# export TABLEFLOW_API_SECRET=<your-tableflow-api-secret>
+
+# Probar el acceso a Tableflow listando los temas (inicialmente debe estar vacío)
+confluent tableflow topic list
+----
+
+==== Almacenar claves API en el archivo de entorno
+
+[source,bash]
+----
+# Acceder al directorio de scripts
+cd ./scripts/kafka
+
+# Copiar el archivo de entorno de ejemplo
+cp .env.example .env
+
+# Edita el archivo .env con tus claves de API:
+# export KAFKA_API_KEY="tu-clave-de-API-de-kafka"
+# export KAFKA_API_SECRET="tu-secreto-de-API-de-kafka"
+# export SCHEMA_REGISTRY_API_KEY="tu-clave-de-API-de-sr"
+# export SCHEMA_REGISTRY_API_SECRET="tu-secreto-de-api-de-sr"
+# export TABLEFLOW_API_KEY="tu-clave-de-API-de-tableflow"
+# export TABLEFLOW_API_SECRET="tu-secreto-de-api-de-tableflow"
+
+# Carga las variables de entorno
+source .env
+----
+
+=== Validar la conectividad del clúster
+
+[source,bash]
+----
+# Probar la conectividad del clúster listando los temas (inicialmente debe estar vacío)
+confluent kafka topic Lista
+
+# Si la operación es correcta, debería ver una lista vacía o temas del sistema.
+----
+
+== ✅ Lista de verificación de validación
+
+Antes de continuar con la siguiente sección, asegúrese de lo siguiente:
+
+- [ ] La extensión VSCode Confluent está instalada y funcionando.
+- [ ] La CLI de Confluent está instalada (versión 3.x+).
+- [ ] DuckDB está instalado y accesible.
+- [ ] Se ha iniciado sesión correctamente en Confluent Cloud.
+- [ ] Entorno de taller creado y activo.
+- [ ] Clúster básico de Kafka creado y en ejecución.
+- [ ] Claves de API del clúster de Kafka generadas y configuradas.
+- [ ] Claves de API del registro de esquema generadas y configuradas.
+- [ ] Claves de API de Tableflow generadas y configuradas.
+- [ ] Claves de API almacenadas en el archivo `.env` del directorio `scripts/kafka/`.
+- [ ] Conectividad del clúster validada.
+
+== 🔧 Entregables clave
+
+Al final de esta sección, debería tener:
+
+* **Entorno de Confluent Cloud en funcionamiento** con la autenticación adecuada.
+* **Sesión CLI autenticada** con contexto guardado
+* **Clúster básico de Kafka** listo para la creación de temas y la transmisión de datos
+* **Claves API configuradas** para acceso programático
+
+== 🚨 Solución de problemas
+
+=== Problemas comunes
+
+**Problemas de inicio de sesión en la CLI**:
+Si el navegador no se abre automáticamente:
+[source,bash]
+----
+# Intentar iniciar sesión manualmente con el indicador --no-browser
+confluent login --save --no-browser
+# Seguir la URL proporcionada manualmente
+----
+
+**Fallo al crear el clúster**:
+Comprobar los límites de la cuenta:
+[source,bash]
+----
+# Comprobar las cuotas de servicio
+confluent service-quota list organization
+----
+
+**Problemas con las claves API**:
+Si falla la creación de la clave API:
+[source,bash]
+----
+# Listar las claves API existentes
+confluent api-key list
+# Eliminar las claves no utilizadas si se alcanza el límite
+confluent api-key Eliminar <key-id>
+----
+
+== 📚 Recursos adicionales
+
+* https://docs.confluent.io/confluent-cli/current/install.html[Guía de instalación de Confluent CLI]
+* https://docs.confluent.io/cloud/current/get-started/index.html[Introducción a Confluent Cloud]
+* https://docs.confluent.io/cloud/current/clusters/cluster-types.html[Tipos de clúster de Kafka]
+
+---
+
+**Siguiente**: Continúe con el enlace: 02-kafka-hands-on.adoc[] para la gestión de temas de Kafka y la configuración del conector HTTP.
