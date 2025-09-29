@@ -1,5 +1,5 @@
 = 🔐 Configuración de Confluent Cloud (15 minutos)
-Luis Chavez <lchavez.olaya@gmail.com>, © 2025
+Luis Chavez <lchavez.olaya@gmail.com>, 2025
 2025-09-11
 :revdate: 2025-09-11
 :linkattrs:
@@ -12,7 +12,7 @@ Luis Chavez <lchavez.olaya@gmail.com>, © 2025
 :toc: auto
 :toc-placement: auto
 :toc-position: auto
-:toc-title: Contenido de la guía de configuración
+:toc-title: Contenido de la Guía de configuración
 :toclevels: 3
 :idprefix:
 :idseparator: -
