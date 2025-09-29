@@ -52,6 +52,7 @@
         "java.home": "/usr/local/sdkman/candidates/java/current"
       }
     }
+    
   },
 
   "onCreateCommand": ".devcontainer/bootstrap.sh",
@@ -70,6 +71,7 @@
   },
 
   "remoteUser": "vscode",
+  "containerUser": "vscode",
   "containerEnv": {
     "WORKSHOP_ENV": "codespaces",
     "CONFLUENT_DISABLE_UPDATES": "true"

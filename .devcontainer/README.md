@@ -1,129 +1,133 @@
-# 🚀 GitHub Codespaces Setup for Confluent Cloud Workshop
+# 🚀 Configuración de GitHub Codespaces para el Taller de Confluent Cloud
 
-This directory contains the development container configuration for running the Confluent Cloud Workshop in GitHub Codespaces.
+Este directorio contiene la configuración del contenedor de desarrollo para ejecutar el Taller de Confluent Cloud en GitHub Codespaces.
 
-## 🏗️ What's Included
+## 🏗️ Qué se Incluye
 
-### Base Environment
-- **Ubuntu 22.04** base image
-- **Zsh** with Oh My Zsh configuration
-- **Node.js 18** for web development
-- **Python 3.11** with workshop packages
-- **Java 17** with Maven and Gradle
+### Entorno Base
+- **Ubuntu 22.04** imagen base
+- **Zsh** con configuración de Oh My Zsh
+- **Node.js 18** para desarrollo web
+- **Python 3.11** con paquetes del taller
+- **Java 17** con Maven y Gradle
 
-### Workshop Tools
-- **Confluent CLI** - Latest version for Confluent Cloud management
-- **DuckDB** - For analytics queries on Iceberg tables
-- **VSCode Extensions** - Confluent Cloud extension and development tools
+### Herramientas del Taller
+- **Confluent CLI** - Última versión para la gestión de Confluent Cloud
+- **DuckDB** - Para consultas analíticas en tablas Iceberg
+- **Extensiones de VSCode** - Extensión de Confluent Cloud y herramientas de desarrollo
 
-### Pre-installed Python Packages
-- `confluent-kafka[avro]` - Kafka client with Avro support
-- `requests` - HTTP client for API calls
-- `pandas` - Data manipulation
-- `duckdb-engine` - DuckDB SQLAlchemy engine
+### Paquetes de Python Preinstalados
+- `confluent-kafka[avro]` - Cliente de Kafka con soporte para Avro
+- `requests` - Cliente HTTP para llamadas a API
+- `pandas` - Manipulación de datos
+- `duckdb-engine` - Motor SQLAlchemy para DuckDB
 
-## 🎯 Quick Start
+## 🎯 Inicio Rápido
 
-1. **Open in Codespaces**: Click the "Code" button → "Codespaces" → "Create codespace"
-2. **Wait for setup**: The bootstrap script will automatically install all dependencies
-3. **Validate environment**: Run `workshop-validate` 
-4. **Login to Confluent**: Run `workshop-login`
-5. **Start workshop**: Follow `guides/01-setup-confluent-cloud.adoc`
+1. **Abrir en Codespaces**: Haz clic en el botón "Code" → "Codespaces" → "Create codespace"
+2. **Esperar la configuración**: El script de arranque instalará automáticamente todas las dependencias
+3. **Validar el entorno**: Ejecuta `workshop-validate`
+4. **Iniciar sesión en Confluent**: Ejecuta `workshop-login`
+5. **Comenzar el taller**: Sigue las instrucciones de `guides/01-setup-confluent-cloud.adoc`
 
-## 🔧 Workshop Commands
+## 🔧 Comandos del Taller
 
-The devcontainer includes helpful aliases and functions:
+El contenedor de desarrollo incluye alias y funciones útiles:
 
-### Aliases
+### Alias
 ```bash
 cc                 # confluent
-ccenv              # confluent environment  
+ccenv              # confluent environment
 cccluster          # confluent kafka cluster
 cctopic            # confluent kafka topic
 ccconnector        # confluent connect connector
 ccflink            # confluent flink
 ```
 
-### Helper Functions
+### Funciones de Ayuda
 ```bash
-workshop-status    # Check environment status
-workshop-validate  # Run prerequisites validation
-workshop-login     # Login to Confluent Cloud
+workshop-status    # Comprobar el estado del entorno
+workshop-validate  # Ejecutar la validación de prerrequisitos
+workshop-login     # Iniciar sesión en Confluent Cloud
 ```
 
-## 📁 Directory Structure
+## 📁 Estructura del Directorio
 
 ```
 .devcontainer/
-├── devcontainer.json    # Main configuration
-├── bootstrap.sh         # Setup script
-└── README.md           # This file
+├── devcontainer.json    # Configuración principal
+├── bootstrap.sh         # Script de configuración
+└── README.md           # Este archivo
 ```
 
-## 🔍 Configuration Details
+## 🔍 Detalles de Configuración
 
-### Port Forwarding
-- **8080** - Application Server
-- **3000** - Development Server  
-- **5000** - Flask/Python apps
-- **8000** - Alternative web server
+### Redirección de Puertos
+- **8080** - Servidor de aplicaciones
+- **3000** - Servidor de desarrollo
+- **5000** - Aplicaciones Flask/Python
+- **8000** - Servidor web alternativo
 
-### Environment Variables
-- `WORKSHOP_ENV=codespaces` - Identifies Codespaces environment
-- `CONFLUENT_DISABLE_UPDATES=true` - Prevents CLI update prompts
+### Variables de Entorno
+- `WORKSHOP_ENV=codespaces` - Identifica el entorno de Codespaces
+- `CONFLUENT_DISABLE_UPDATES=true` - Evita las solicitudes de actualización de la CLI
 
-### VSCode Extensions
-- Confluent Cloud extension for cluster management
-- Python development tools (Black, Flake8)
-- Java development pack
-- Markdown and JSON support
+### Extensiones de VSCode
+- Extensión de Confluent Cloud para la gestión de clústeres
+- Herramientas de desarrollo de Python (Black, Flake8)
+- Paquete de desarrollo de Java
+- Soporte para Markdown y JSON
 
-## 🚨 Troubleshooting
+## 🚨 Solución de Problemas
 
-### Bootstrap Issues
-If the bootstrap script fails:
+### Problemas de Arranque
+Si el script de arranque falla:
 ```bash
-# Re-run bootstrap manually
+# Volver a ejecutar el arranque manualmente
 .devcontainer/bootstrap.sh
 
-# Check logs
+# Comprobar los registros
 cat /tmp/bootstrap.log
 ```
 
-### Missing Tools
-If tools aren't available after setup:
+### Herramientas Faltantes
+Si las herramientas no están disponibles después de la configuración:
 ```bash
-# Reload shell configuration
+# Recargar la configuración del shell
 source ~/.zshrc
 
-# Check PATH
+# Comprobar el PATH
 echo $PATH
 
-# Verify installations
+# Verificar las instalaciones
 confluent version
 duckdb --version
 ```
 
-### Permission Issues
+### Problemas de Permisos
 ```bash
-# Fix script permissions
+# Arreglar los permisos de los scripts
 find scripts -name "*.sh" -exec chmod +x {} \;
+
+# opcional el permiso directo
+chmod +x .devcontainer/bootstrap.sh;
+
 ```
 
-## 🔄 Updates
+## 🔄 Actualizaciones
 
-To update the devcontainer configuration:
-1. Modify `devcontainer.json` or `bootstrap.sh`
-2. Rebuild container: Command Palette → "Codespaces: Rebuild Container"
+Para actualizar la configuración del contenedor de desarrollo:
+1. Modifica `devcontainer.json` o `bootstrap.sh`
+2. Reconstruye el contenedor: Paleta de Comandos → "Codespaces: Rebuild Container"
 
-## 📚 Workshop Resources
+## 📚 Recursos del Taller
 
-- **Guides**: `/guides/` - Step-by-step instructions
-- **Scripts**: `/scripts/` - Automation helpers  
-- **Data**: `/data/` - Sample datasets
-- **Configs**: `/configs/` - Configuration templates
-- **Troubleshooting**: `/troubleshooting/` - Issue resolution
+- **Guías**: `/guides/` - Instrucciones paso a paso
+- **Scripts**: `/scripts/` - Ayudantes de automatización
+- **Datos**: `/data/` - Conjuntos de datos de muestra
+- **Configuraciones**: `/configs/` - Plantillas de configuración
+- **Solución de problemas**: `/troubleshooting/` - Resolución de problemas (pendiente)
 
 ---
 
-**Ready to start?** Run `workshop-validate` to ensure everything is working! 🎉
+**¿Listo para empezar?** ¡Ejecuta `workshop-validate` para asegurarte de que todo funciona! 🎉
