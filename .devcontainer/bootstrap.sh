@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# 🚀 Confluent Cloud Workshop Bootstrap Script for GitHub Codespaces
-# This script installs all required tools and dependencies
+# 🚀 Script de Bootstrap de Confluent Cloud Workshop para GitHub Codespaces
+# Este script instala todas las herramientas y dependencias necesarias.
 
 set -euo pipefail
 
@@ -12,7 +12,7 @@ YELLOW='\033[33m'
 BLUE='\033[34m'
 RESET='\033[0m'
 
-echo -e "🚀 ${BLUE}Bootstrapping Confluent Cloud Workshop Environment${RESET}"
+echo -e "🚀 ${BLUE}Arranque del entorno del taller en la nube de Confluent${RESET}"
 echo "=================================================="
 
 # Update system packages
