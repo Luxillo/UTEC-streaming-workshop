@@ -136,26 +136,26 @@ echo -e "   📝 Students can validate and install manually if needed${RESET}"
 
 # Create welcome message
 cat > /home/vscode/.workshop-welcome << 'EOF'
-🎉 Welcome to the Confluent Cloud Workshop!
+🎉 ¡Bienvenido al taller de Confluent Cloud!
 
-Quick Start Commands:
-  workshop-status     - Check environment status
-  workshop-validate   - Run prerequisites validation
-  workshop-login      - Login to Confluent Cloud
+Comandos de inicio rápido:
+    workshop-status     - Verificar el estado del entorno
+    workshop-validate   - Ejecutar la validación de prerrequisitos
+    workshop-login      - Iniciar sesión en Confluent Cloud
 
-Workshop Structure:
-  📚 guides/          - Step-by-step workshop guides
-  🔧 scripts/         - Automation scripts
-  📊 data/            - Sample data files
-  ⚙️  configs/        - Configuration templates
-  🚨 troubleshooting/ - Issue resolution guides
+Estructura del taller:
+    📚 guias/ - Guías paso a paso del taller
+    🔧 scripts/ - Scripts de automatización
+    📊 data/ - Archivos de datos de ejemplo
+    ⚙️ configs/ - Plantillas de configuración
+    🚨 troubleshooting/ - Guías para la resolución de problemas
 
-Next Steps:
-  1. Run: workshop-validate
-  2. Run: workshop-login
-  3. Follow guides/01-setup-confluent-cloud.adoc
+Próximos pasos:
+    1. Ejecutar: workshop-validate
+    2. Ejecutar: workshop-login
+    3. Seguir guias/01-setup-confluent-cloud.adoc
 
-Happy learning! 🚀
+¡Que disfrutes aprendiendo! 🚀
 EOF
 
 # Display welcome message on terminal startup
