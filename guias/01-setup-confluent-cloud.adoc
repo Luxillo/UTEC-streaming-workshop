@@ -246,7 +246,7 @@ source .env
 [source,bash]
 ----
 # Probar la conectividad del clúster listando los temas (inicialmente debe estar vacío)
-confluent kafka topic Lista
+confluent kafka topic list
 
 # Si la operación es correcta, debería ver una lista vacía o temas del sistema.
 ----
