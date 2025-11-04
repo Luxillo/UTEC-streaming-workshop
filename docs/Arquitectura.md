@@ -2,36 +2,112 @@
 
 Este documento describe la arquitectura del proyecto y el flujo de datos entre sus componentes.
 
-## Diagrama de Flujo de Datos
+## Diagrama de Contexto (C4)
 
-El siguiente diagrama ilustra cómo los datos de precios de criptomonedas fluyen desde el origen (API de CoinGecko) hasta la capa de análisis (DuckDB).
+El siguiente diagrama de contexto C4 muestra una vista de alto nivel del sistema, sus usuarios y las interacciones con sistemas externos.
 
 ```mermaid
-graph TD
-    subgraph "Fuente de Datos Externa"
-        A[CoinGecko API]
+C4Context
+    title Diagrama de Contexto para la Plataforma de Streaming de Criptomonedas
+
+    Person(analyst, "Analista de Datos", "Consume y analiza los datos de precios.")
+    System_Ext(coingecko, "CoinGecko API", "Fuente externa de precios de criptomonedas en tiempo real.")
+    System_Ext(analytics, "Sistema de Analítica", "Herramientas para consultar y visualizar los datos (e.g., DuckDB, PowerBI).")
+
+    System(streaming_platform, "Plataforma de Streaming de Precios", "Ingesta, procesa y distribuye flujos de datos de precios en tiempo real.")
+
+    Rel(coingecko, streaming_platform, "Provee datos de precios vía API REST")
+    Rel(streaming_platform, analytics, "Envía datos procesados para almacenamiento y consulta")
+    Rel(analyst, analytics, "Ejecuta consultas y crea dashboards")
+```
+
+## Diagrama de Secuencia del Dato
+
+Este diagrama ilustra la secuencia de interacciones entre los componentes para mover los datos desde el origen hasta su destino final.
+
+```mermaid
+sequenceDiagram
+    participant CG as CoinGecko API
+    participant KC as Kafka Connect<br>(HttpSourceConnector)
+    participant K1 as Kafka Topic<br>(crypto-prices)
+    participant FL as Apache Flink
+    participant K2 as Kafka Topic<br>(crypto-prices-exploded)
+    participant TF as Tableflow
+    participant AI as Apache Iceberg Table
+    participant DB as DuckDB
+
+    loop Sondeo periódico
+        KC->>CG: GET /simple/price?ids=...
+        activate CG
+        CG-->>KC: HTTP 200 OK (JSON con precios)
+        deactivate CG
     end
 
-    subgraph "Plataforma de Streaming (Confluent Cloud)"
-        B[Kafka Connect <br> - HttpSourceConnector]
-        C[Tópico de Kafka <br> -crypto-prices]
-        D[Apache Flink <br> -Procesamiento de Streams]
-        E[Tópico de Kafka <br> -crypto-prices-exploded]
+    KC->>K1: Produce evento con precios
+    FL->>K1: Consume evento crudo
+    FL->>FL: Procesa y expande el JSON
+    FL->>K2: Produce eventos enriquecidos
+    TF->>K2: Consume eventos procesados
+    TF->>AI: Materializa datos en la tabla Iceberg
+    DB->>AI: Lee la tabla para análisis (via SELECT)
+
+```
+
+## Diagrama de Componentes
+
+Este diagrama descompone la "Plataforma de Streaming" en sus principales componentes lógicos y muestra cómo interactúan entre sí y con los sistemas externos.
+
+```mermaid
+graph LR
+    subgraph externals ["Sistemas Externos"]
+        direction LR
+        coingecko_api(CoinGecko API)
     end
 
-    subgraph "Capa de Almacenamiento y Análisis"
-        F[Tableflow]
-        G[Tabla Apache Iceberg]
-        H[DuckDB]
+    subgraph streaming_platform ["Plataforma de Streaming de Precios (Confluent Cloud)"]
+        direction TB
+
+        subgraph connect ["Ingesta"]
+            direction LR
+            kc[Kafka Connect<br>HttpSourceConnector]
+        end
+
+        subgraph broker ["Broker de Mensajes"]
+            direction TB
+            raw_topic(Tópico<br>crypto-prices)
+            processed_topic(Tópico<br>crypto-prices-exploded)
+        end
+
+        subgraph processing ["Procesamiento de Streams"]
+            direction LR
+            flink[Apache Flink]
+        end
+
+        kc -- "produce en" --> raw_topic
+        raw_topic -- "es consumido por" --> flink
+        flink -- "produce en" --> processed_topic
     end
 
-    A -- 1 Sondeo de precios (JSON) --> B
-    B -- 2 Publica eventos en Kafka --> C
-    C -- 3 Lee streams de precios --> D
-    D -- 4 Procesa y enriquece los datos --> E
-    E -- 5 Lee el tópico procesado --> F
-    F -- 6 Materializa como tabla Iceberg --> G
-    G -- 7 Consulta la tabla --> H
+    subgraph analytics_layer ["Capa de Almacenamiento y Análisis"]
+        direction TB
+        tableflow[Tableflow]
+        iceberg[Tabla<br>Apache Iceberg]
+        duckdb[Motor de Consulta<br>DuckDB]
+
+        tableflow -- "materializa en" --> iceberg
+        iceberg -- "es leída por" --> duckdb
+    end
+
+    coingecko_api -- "1. Sondeo vía API REST" --> kc
+    processed_topic -- "2. Consume stream de eventos" --> tableflow
+
+    style kc fill:#cce5ff,stroke:#333,stroke-width:2px
+    style flink fill:#cce5ff,stroke:#333,stroke-width:2px
+    style tableflow fill:#cce5ff,stroke:#333,stroke-width:2px
+    style duckdb fill:#cce5ff,stroke:#333,stroke-width:2px
+    style raw_topic fill:#ffebcc,stroke:#333,stroke-width:2px
+    style processed_topic fill:#ffebcc,stroke:#333,stroke-width:2px
+    style iceberg fill:#d4edda,stroke:#333,stroke-width:2px
 ```
 
 ### Descripción de Componentes
