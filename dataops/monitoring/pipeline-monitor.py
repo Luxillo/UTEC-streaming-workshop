@@ -29,6 +29,10 @@ class PipelineMonitor:
     def __init__(self):
         self.consumer_config = {
             'bootstrap.servers': os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092'),
+            'security.protocol': 'SASL_SSL',
+            'sasl.mechanisms': 'PLAIN',
+            'sasl.username': os.getenv('KAFKA_API_KEY'),
+            'sasl.password': os.getenv('KAFKA_API_SECRET'),
             'group.id': 'pipeline-monitor',
             'auto.offset.reset': 'latest'
         }

@@ -10,6 +10,9 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Any
 from confluent_kafka import Consumer, KafkaError
+from confluent_kafka.schema_registry import SchemaRegistryClient
+from confluent_kafka.schema_registry.avro import AvroDeserializer
+from confluent_kafka.serialization import SerializationContext, MessageField
 import os
 from dataclasses import dataclass
 
@@ -23,10 +26,22 @@ class DataQualityResult:
 class CryptoDataQualityTester:
     def __init__(self):
         self.consumer_config = {
-            'bootstrap.servers': os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092'),
-            'group.id': 'data-quality-tester',
-            'auto.offset.reset': 'latest'
+            'bootstrap.servers': os.getenv('KAFKA_BOOTSTRAP_SERVERS'),
+            'security.protocol': 'SASL_SSL',
+            'sasl.mechanisms': 'PLAIN',
+            'sasl.username': os.getenv('KAFKA_API_KEY'),
+            'sasl.password': os.getenv('KAFKA_API_SECRET'),
+            'group.id': 'data-quality-tester-' + str(int(time.time())),
+            'auto.offset.reset': 'earliest',
+            'session.timeout.ms': 30000
         }
+        
+        # Schema Registry config
+        self.sr_config = {
+            'url': os.getenv('SCHEMA_REGISTRY_URL'),
+            'basic.auth.user.info': f"{os.getenv('SCHEMA_REGISTRY_API_KEY')}:{os.getenv('SCHEMA_REGISTRY_API_SECRET')}"
+        }
+        
         self.results: List[DataQualityResult] = []
         
     def test_message_structure(self, message: Dict[str, Any]) -> DataQualityResult:
@@ -124,56 +139,79 @@ class CryptoDataQualityTester:
     
     def run_tests(self, topic: str = 'crypto-prices', timeout: int = 30) -> List[DataQualityResult]:
         """Ejecutar todos los tests de calidad"""
-        consumer = Consumer(self.consumer_config)
-        consumer.subscribe([topic])
-        
-        print(f"🔍 Running data quality tests on topic: {topic}")
-        print(f"⏱️  Timeout: {timeout} seconds")
-        
-        start_time = time.time()
-        messages_tested = 0
-        
         try:
-            while time.time() - start_time < timeout:
-                msg = consumer.poll(1.0)
-                
-                if msg is None:
-                    continue
+            # Setup Schema Registry client
+            schema_registry_client = SchemaRegistryClient(self.sr_config)
+            avro_deserializer = AvroDeserializer(schema_registry_client)
+            
+            consumer = Consumer(self.consumer_config)
+            consumer.subscribe([topic])
+            
+            print(f"🔍 Running data quality tests on topic: {topic}")
+            print(f"⏱️  Timeout: {timeout} seconds")
+            
+            start_time = time.time()
+            messages_tested = 0
+            
+            try:
+                while time.time() - start_time < timeout:
+                    msg = consumer.poll(1.0)
                     
-                if msg.error():
-                    if msg.error().code() == KafkaError._PARTITION_EOF:
+                    if msg is None:
                         continue
-                    else:
-                        print(f"❌ Consumer error: {msg.error()}")
-                        break
-                
-                try:
-                    message_data = json.loads(msg.value().decode('utf-8'))
-                    messages_tested += 1
+                        
+                    if msg.error():
+                        if msg.error().code() == KafkaError._PARTITION_EOF:
+                            continue
+                        else:
+                            print(f"❌ Consumer error: {msg.error()}")
+                            break
                     
-                    # Ejecutar tests
-                    tests = [
-                        self.test_message_structure(message_data),
-                        self.test_data_freshness(message_data),
-                        self.test_price_validity(message_data),
-                        self.test_data_completeness(message_data)
-                    ]
+                    try:
+                        # Deserializar mensaje Avro
+                        raw_value = msg.value()
+                        if raw_value is None:
+                            continue
+                        
+                        # Deserializar usando Schema Registry
+                        message_data = avro_deserializer(raw_value, SerializationContext(topic, MessageField.VALUE))
+                        
+                        if message_data is None:
+                            print(f"⚠️  Skipping null message")
+                            continue
+                        
+                        messages_tested += 1
+                        print(f"📨 Message {messages_tested}: {list(message_data.keys()) if isinstance(message_data, dict) else type(message_data)}")
+                        
+                        # Ejecutar tests
+                        tests = [
+                            self.test_message_structure(message_data),
+                            self.test_data_freshness(message_data),
+                            self.test_price_validity(message_data),
+                            self.test_data_completeness(message_data)
+                        ]
+                        
+                        self.results.extend(tests)
+                        
+                        print(f"✅ Tested message {messages_tested}")
+                        
+                    except Exception as e:
+                        print(f"❌ Error processing message: {e}")
+                        self.results.append(DataQualityResult(
+                            "message_processing", False,
+                            f"Message processing error: {e}", datetime.now()
+                        ))
                     
-                    self.results.extend(tests)
-                    
-                    print(f"✅ Tested message {messages_tested}")
-                    
-                except json.JSONDecodeError as e:
-                    self.results.append(DataQualityResult(
-                        "json_parsing", False,
-                        f"JSON parsing error: {e}", datetime.now()
-                    ))
-                
-        finally:
-            consumer.close()
-        
-        print(f"📊 Total messages tested: {messages_tested}")
-        return self.results
+            finally:
+                consumer.close()
+            
+            print(f"📊 Total messages tested: {messages_tested}")
+            return self.results
+            
+        except Exception as e:
+            print(f"❌ Schema Registry error: {e}")
+            print(f"💡 Make sure SCHEMA_REGISTRY_URL and credentials are configured")
+            return []
     
     def generate_report(self) -> Dict[str, Any]:
         """Generar reporte de calidad de datos"""
@@ -213,15 +251,20 @@ if __name__ == "__main__":
     print("\n" + "="*50)
     print("📋 DATA QUALITY REPORT")
     print("="*50)
-    print(f"✅ Passed: {report['summary']['passed']}")
-    print(f"❌ Failed: {report['summary']['failed']}")
-    print(f"📊 Success Rate: {report['summary']['success_rate']:.1f}%")
     
-    if report['summary']['failed'] > 0:
-        print("\n❌ FAILED TESTS:")
-        for result in report['test_results']:
-            if result['status'] == 'FAIL':
-                print(f"   - {result['test']}: {result['message']}")
+    if "error" in report:
+        print(f"❌ Error: {report['error']}")
+        print("💡 Make sure the pipeline is running and data is flowing")
+    else:
+        print(f"✅ Passed: {report['summary']['passed']}")
+        print(f"❌ Failed: {report['summary']['failed']}")
+        print(f"📊 Success Rate: {report['summary']['success_rate']:.1f}%")
+        
+        if report['summary']['failed'] > 0:
+            print("\n❌ FAILED TESTS:")
+            for result in report['test_results']:
+                if result['status'] == 'FAIL':
+                    print(f"   - {result['test']}: {result['message']}")
     
     # Guardar reporte
     with open('data-quality-report.json', 'w') as f:

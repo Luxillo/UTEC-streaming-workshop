@@ -159,12 +159,12 @@ cp scripts/kafka/.env.example scripts/kafka/.env
 
 > *"En 2 horas aprendí más sobre DataOps que en meses de lectura. El enfoque práctico con datos reales hace toda la diferencia."* - Estudiante anterior
 
-> *"La automatización que implementamos nos ahorró 4 horas semanales en nuestro equipo."* - Data Engineer
+> *"La automatización que implementamos nos ahorró 4 horas semanales en nuestro equipo."* - Nalo Jimenez
 
 ## 📞 Soporte
 
 Para preguntas sobre el curso:
-- 📧 Email: instructor@example.com
+- 📧 Email: lchavez.olaya@gmail.com
 - 💬 Slack: #dataops-workshop
 - 📚 Documentación: [GitHub Issues](https://github.com/repo/issues)
 

@@ -21,9 +21,20 @@ if ! command -v confluent &> /dev/null; then
     exit 1
 fi
 
+# Instalar dependencias Python
+echo -e "${YELLOW}📦 Installing Python dependencies...${RESET}"
+pip3 install confluent-kafka avro-python3 fastavro --quiet || echo "Dependencies already installed"
+
 # 2. Setup environment
 echo -e "${YELLOW}🔧 Setting up environment...${RESET}"
-cd ../../scripts/kafka
+KAFKA_DIR="$(pwd)/scripts/kafka"
+
+if [ ! -d "$KAFKA_DIR" ]; then
+    echo -e "${RED}❌ Kafka scripts directory not found: $KAFKA_DIR${RESET}"
+    exit 1
+fi
+
+cd "$KAFKA_DIR"
 if [ ! -f ".env" ]; then
     echo -e "${RED}❌ .env file not found. Please configure your API keys${RESET}"
     exit 1

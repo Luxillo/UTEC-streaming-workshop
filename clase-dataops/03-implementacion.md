@@ -39,6 +39,10 @@ cp .env.example .env
 
 **Paso 3:** Ejecutar setup automatizado
 ```bash
+# Instalar dependencias
+./dataops/automation/install-dependencies.sh
+
+# Luego ejecutar el setup completo
 ./dataops/automation/setup-pipeline.sh
 ```
 
