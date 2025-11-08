@@ -23,7 +23,15 @@ fi
 
 # 2. Setup environment
 echo -e "${YELLOW}🔧 Setting up environment...${RESET}"
-cd ../../scripts/kafka
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+KAFKA_DIR="${SCRIPT_DIR}/../../scripts/kafka"
+
+if [ ! -d "$KAFKA_DIR" ]; then
+    echo -e "${RED}❌ Kafka scripts directory not found: $KAFKA_DIR${RESET}"
+    exit 1
+fi
+
+cd "$KAFKA_DIR"
 if [ ! -f ".env" ]; then
     echo -e "${RED}❌ .env file not found. Please configure your API keys${RESET}"
     exit 1
