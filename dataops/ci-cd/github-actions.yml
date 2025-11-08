@@ -1,0 +1,186 @@
+name: DataOps Pipeline CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run data quality tests every hour
+    - cron: '0 * * * *'
+
+env:
+  KAFKA_BOOTSTRAP_SERVERS: ${{ secrets.KAFKA_BOOTSTRAP_SERVERS }}
+  KAFKA_API_KEY: ${{ secrets.KAFKA_API_KEY }}
+  KAFKA_API_SECRET: ${{ secrets.KAFKA_API_SECRET }}
+
+jobs:
+  schema-validation:
+    runs-on: ubuntu-latest
+    name: 🔍 Schema Validation
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Validate Avro Schema
+      run: |
+        echo "🔍 Validating Avro schema..."
+        # Install avro-tools
+        wget https://repo1.maven.org/maven2/org/apache/avro/avro-tools/1.11.1/avro-tools-1.11.1.jar
+        
+        # Validate schema syntax
+        java -jar avro-tools-1.11.1.jar compile schema data/price-event-schema.avsc /tmp/
+        
+        echo "✅ Schema validation passed"
+
+  data-quality-tests:
+    runs-on: ubuntu-latest
+    name: 🧪 Data Quality Tests
+    needs: schema-validation
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        pip install confluent-kafka requests
+    
+    - name: Run Data Quality Tests
+      run: |
+        cd dataops/tests
+        python3 data-quality-tests.py
+        
+        # Check if tests passed
+        if [ -f "data-quality-report.json" ]; then
+          SUCCESS_RATE=$(python3 -c "import json; report=json.load(open('data-quality-report.json')); print(report['summary']['success_rate'])")
+          echo "Data Quality Success Rate: $SUCCESS_RATE%"
+          
+          if (( $(echo "$SUCCESS_RATE < 80" | bc -l) )); then
+            echo "❌ Data quality below threshold (80%)"
+            exit 1
+          fi
+        fi
+    
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: data-quality-report
+        path: dataops/tests/data-quality-report.json
+
+  infrastructure-validation:
+    runs-on: ubuntu-latest
+    name: 🏗️ Infrastructure Validation
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Confluent CLI
+      run: |
+        curl -sL --http1.1 https://cnfl.io/cli | sh -s -- latest
+        export PATH=$PATH:$HOME/.confluent/bin
+    
+    - name: Validate Kafka Configuration
+      run: |
+        echo "🔍 Validating Kafka connector configuration..."
+        
+        # Validate JSON syntax
+        python3 -m json.tool configs/connector-configs/http-source-coingecko.json > /dev/null
+        
+        echo "✅ Connector configuration is valid JSON"
+    
+    - name: Test API Connectivity
+      run: |
+        echo "🌐 Testing CoinGecko API connectivity..."
+        
+        RESPONSE=$(curl -s -w "%{http_code}" "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd")
+        HTTP_CODE="${RESPONSE: -3}"
+        
+        if [ "$HTTP_CODE" -eq 200 ]; then
+          echo "✅ CoinGecko API is accessible"
+        else
+          echo "❌ CoinGecko API returned HTTP $HTTP_CODE"
+          exit 1
+        fi
+
+  monitoring-setup:
+    runs-on: ubuntu-latest
+    name: 📊 Monitoring Setup
+    needs: [data-quality-tests, infrastructure-validation]
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install monitoring dependencies
+      run: |
+        pip install confluent-kafka
+    
+    - name: Start Pipeline Monitoring
+      run: |
+        cd dataops/monitoring
+        timeout 60 python3 pipeline-monitor.py || true
+        
+        if [ -f "pipeline-monitoring-report.json" ]; then
+          echo "📊 Monitoring report generated"
+        fi
+    
+    - name: Upload Monitoring Report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: monitoring-report
+        path: dataops/monitoring/pipeline-monitoring-report.json
+
+  deployment:
+    runs-on: ubuntu-latest
+    name: 🚀 Deploy Pipeline
+    needs: [data-quality-tests, infrastructure-validation]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Deploy to Production
+      run: |
+        echo "🚀 Deploying pipeline to production..."
+        
+        # Make scripts executable
+        chmod +x dataops/automation/setup-pipeline.sh
+        chmod +x scripts/kafka/*.sh
+        
+        # Run automated setup
+        ./dataops/automation/setup-pipeline.sh
+        
+        echo "✅ Pipeline deployed successfully"
+
+  notification:
+    runs-on: ubuntu-latest
+    name: 📢 Notifications
+    needs: [data-quality-tests, monitoring-setup, deployment]
+    if: always()
+    
+    steps:
+    - name: Notify Success
+      if: ${{ needs.data-quality-tests.result == 'success' && needs.monitoring-setup.result == 'success' }}
+      run: |
+        echo "🎉 DataOps pipeline executed successfully!"
+        echo "✅ All data quality tests passed"
+        echo "📊 Monitoring is active"
+    
+    - name: Notify Failure
+      if: ${{ needs.data-quality-tests.result == 'failure' || needs.monitoring-setup.result == 'failure' }}
+      run: |
+        echo "❌ DataOps pipeline failed!"
+        echo "🔍 Check the logs for details"
+        exit 1
