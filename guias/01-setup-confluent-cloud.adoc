@@ -159,6 +159,9 @@ confluent kafka cluster use $CC_KAFKA_CLUSTER
 
 # Describir el clúster para verificar la configuración
 confluent kafka cluster describe $CC_KAFKA_CLUSTER
+
+# Obtener la URL del Bootstrap Server
+# Copiar el endpoint (ej: pkc-xxxxx.region.aws.confluent.cloud:9092)
 ----
 
 === Generar claves API
@@ -198,6 +201,10 @@ confluent api-key create --resource $SCHEMA_REGISTRY_CLUSTER_ID --description "C
 # Usar la clave API del Registro de Esquemas
 # export SCHEMA_REGISTRY_API_KEY=<your-sr-api-key>
 # export SCHEMA_REGISTRY_API_SECRET=<your-sr-api-secret>
+
+# Obtener la URL del Schema Registry
+confluent schema-registry cluster describe
+# Copiar la URL del endpoint (ej: https://psrc-xxxxx.region.aws.confluent.cloud)
 ----
 
 ==== API de Tableflow Claves
@@ -230,8 +237,10 @@ cd ./scripts/kafka
 cp .env.example .env
 
 # Edita el archivo .env con tus claves de API:
+# export KAFKA_BOOTSTRAP_SERVERS="pkc-xxxxx.region.aws.confluent.cloud:9092"
 # export KAFKA_API_KEY="tu-clave-de-API-de-kafka"
 # export KAFKA_API_SECRET="tu-secreto-de-API-de-kafka"
+# export SCHEMA_REGISTRY_URL="https://psrc-xxxxx.region.aws.confluent.cloud"
 # export SCHEMA_REGISTRY_API_KEY="tu-clave-de-API-de-sr"
 # export SCHEMA_REGISTRY_API_SECRET="tu-secreto-de-api-de-sr"
 # export TABLEFLOW_API_KEY="tu-clave-de-API-de-tableflow"

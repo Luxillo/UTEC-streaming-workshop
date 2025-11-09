@@ -6,27 +6,49 @@ Implementar y personalizar tests de calidad de datos para el pipeline de streami
 
 ## 📋 Prerequisitos
 - [ ] Pipeline funcionando (Ejercicio 1 completado)
-- [ ] Python 3.8+ con confluent-kafka instalado
-- [ ] Datos fluyendo en tópicos
+- [ ] Python 3.8+ con dependencias instaladas:
+  - [ ] `confluent-kafka` - Cliente Kafka
+  - [ ] `avro-python3` - Deserialización Avro
+  - [ ] `fastavro` - Procesamiento Avro optimizado
+- [ ] Variables de entorno configuradas en `.env`:
+  - [ ] `KAFKA_BOOTSTRAP_SERVERS` - URL del cluster
+  - [ ] `SCHEMA_REGISTRY_URL` - URL del Schema Registry
+  - [ ] Credenciales de API configuradas
+- [ ] Datos fluyendo en tópicos en **formato Avro**
 
 ## 🧪 Parte A: Ejecutar Tests Existentes (10 min)
 
 ### Paso 1: Instalar Dependencias
 ```bash
-pip3 install confluent-kafka
+# Instalar dependencias para Avro
+pip3 install confluent-kafka avro-python3 fastavro
+
+# O usar el script automatizado
+./dataops/automation/install-dependencies.sh
 ```
 
 ### Paso 2: Configurar Variables de Entorno
 ```bash
 cd scripts/kafka
 source .env
-export KAFKA_BOOTSTRAP_SERVERS="${KAFKA_BOOTSTRAP_SERVERS:-pkc-your-cluster.region.aws.confluent.cloud:9092}"
+
+# Verificar que las variables estén configuradas
+echo "Bootstrap Servers: $KAFKA_BOOTSTRAP_SERVERS"
+echo "Schema Registry: $SCHEMA_REGISTRY_URL"
+echo "API Key: ${KAFKA_API_KEY:0:10}..."
 ```
+
+📝 **Nota Importante**: Los datos en Confluent Cloud están en **formato Avro**, no JSON. El script de tests usa el Schema Registry para deserializar automáticamente los mensajes binarios a objetos Python.
 
 ### Paso 3: Ejecutar Tests de Calidad
 ```bash
 cd ../../dataops/tests
+
+# El script detectará automáticamente el formato Avro
 python3 data-quality-tests.py
+
+# Alternativamente, usar la versión CLI si hay problemas con Schema Registry
+python3 data-quality-cli.py
 ```
 
 ### ✅ Resultado Esperado
@@ -282,10 +304,21 @@ Implementa un test que valide la salud de la API de CoinGecko basado en los tiem
 confluent kafka topic consume crypto-prices --from-beginning --max-messages 1
 ```
 
-### Error: "JSON parsing failed"
+### Error: "Schema Registry error"
 ```bash
-# Verificar formato de mensajes
-confluent kafka topic consume crypto-prices --from-beginning --max-messages 1 --print-key
+# Verificar configuración del Schema Registry
+echo "Schema Registry URL: $SCHEMA_REGISTRY_URL"
+echo "Schema Registry Key: $SCHEMA_REGISTRY_API_KEY"
+
+# Usar versión alternativa con CLI
+python3 data-quality-cli.py
+```
+
+### Error: "Cannot decode message as UTF-8"
+```bash
+# Esto es normal - los mensajes están en formato Avro binario
+# Usar el script principal que maneja Avro automáticamente
+python3 data-quality-tests.py
 ```
 
 ### Tests fallan consistentemente
