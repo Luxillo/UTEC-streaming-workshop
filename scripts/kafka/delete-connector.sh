@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# 🗑️ Delete HTTP Source Connector
-# This script removes the deployed HTTP Source Connector and cleans up resources
+# 🗑️ Eliminar Conector HTTP Source
+# Este script elimina el Conector HTTP Source desplegado y limpia los recursos
 
-# Colors for output
+# Colores para la salida
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -12,66 +12,66 @@ RESET='\033[0m'
 
 CONNECTOR_NAME="coingecko-price-connector"
 
-echo -e "🗑️ ${BLUE}Deleting HTTP Source Connector${RESET}"
-echo "=================================="
+echo -e "🗑️ ${BLUE}Eliminando Conector HTTP Source${RESET}"
+echo "================================"
 
-# First, list all connectors to see what's available
-echo -e "📋 ${YELLOW}Listing all connectors...${RESET}"
+# Primero, listar todos los conectores para ver qué está disponible
+echo -e "📋 ${YELLOW}Listando todos los conectores...${RESET}"
 confluent connect cluster list
 
 echo ""
-echo -e "🔍 ${YELLOW}Getting connector ID for '$CONNECTOR_NAME'...${RESET}"
+echo -e "🔍 ${YELLOW}Obteniendo ID del conector para '$CONNECTOR_NAME'...${RESET}"
 CONNECTOR_ID=$(confluent connect cluster list 2>/dev/null | grep "$CONNECTOR_NAME" | awk '{print $1}')
 
 if [ -z "$CONNECTOR_ID" ]; then
-    echo -e "⚠️  ${YELLOW}Connector '$CONNECTOR_NAME' not found${RESET}"
-    echo -e "💡 ${BLUE}Connector may already be deleted or never existed${RESET}"
+    echo -e "⚠️  ${YELLOW}Conector '$CONNECTOR_NAME' no encontrado${RESET}"
+    echo -e "💡 ${BLUE}El conector puede ya haber sido eliminado o nunca existió${RESET}"
     exit 0
 fi
 
-echo -e "✅ ${GREEN}Connector found with ID: $CONNECTOR_ID${RESET}"
+echo -e "✅ ${GREEN}Conector encontrado con ID: $CONNECTOR_ID${RESET}"
 
-# Confirm deletion
+# Confirmar eliminación
 echo ""
-echo -e "⚠️  ${YELLOW}This will permanently delete the connector and stop data ingestion${RESET}"
-read -p "Are you sure you want to delete the connector? (y/N): " confirm
+echo -e "⚠️  ${YELLOW}Esto eliminará permanentemente el conector y detendrá la ingesta de datos${RESET}"
+read -p "¿Estás seguro de que quieres eliminar el conector? (s/N): " confirm
 
-if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-    echo -e "❌ ${BLUE}Deletion cancelled${RESET}"
+if [[ ! "$confirm" =~ ^[Ss]$ ]]; then
+    echo -e "❌ ${BLUE}Eliminación cancelada${RESET}"
     exit 0
 fi
 
-# Delete the connector using ID
+# Eliminar el conector usando el ID
 echo ""
-echo -e "🗑️ ${YELLOW}Deleting connector '$CONNECTOR_NAME' (ID: $CONNECTOR_ID)...${RESET}"
+echo -e "🗑️ ${YELLOW}Eliminando conector '$CONNECTOR_NAME' (ID: $CONNECTOR_ID)...${RESET}"
 confluent connect cluster delete "$CONNECTOR_ID"
 
 if [ $? -eq 0 ]; then
-    echo -e "✅ ${GREEN}Connector deleted successfully${RESET}"
+    echo -e "✅ ${GREEN}Conector eliminado exitosamente${RESET}"
 else
-    echo -e "❌ ${RED}Failed to delete connector${RESET}"
-    echo -e "🔍 Check your permissions and try again${RESET}"
+    echo -e "❌ ${RED}Falló la eliminación del conector${RESET}"
+    echo -e "🔍 Verifica tus permisos e intenta nuevamente${RESET}"
     exit 1
 fi
 
-# Verify deletion by checking if connector ID still exists in list
+# Verificar eliminación comprobando si el ID del conector aún existe en la lista
 echo ""
-echo -e "🔍 ${YELLOW}Verifying connector deletion...${RESET}"
+echo -e "🔍 ${YELLOW}Verificando eliminación del conector...${RESET}"
 sleep 5
 
 REMAINING_CONNECTOR=$(confluent connect cluster list 2>/dev/null | grep "$CONNECTOR_ID")
 if [ -z "$REMAINING_CONNECTOR" ]; then
-    echo -e "✅ ${GREEN}Connector successfully removed${RESET}"
+    echo -e "✅ ${GREEN}Conector eliminado exitosamente${RESET}"
 else
-    echo -e "⚠️  ${YELLOW}Connector may still be in deletion process${RESET}"
+    echo -e "⚠️  ${YELLOW}El conector puede estar aún en proceso de eliminación${RESET}"
 fi
 
-# List remaining connectors
+# Listar conectores restantes
 echo ""
-echo -e "📋 ${BLUE}Remaining connectors:${RESET}"
+echo -e "📋 ${BLUE}Conectores restantes:${RESET}"
 confluent connect cluster list
 
 echo ""
-echo -e "🎉 ${GREEN}Connector deletion complete!${RESET}"
-echo -e "💡 ${BLUE}Note: The 'crypto-prices' topic will remain with existing data${RESET}"
-echo -e "💡 ${BLUE}Use 'confluent kafka topic delete crypto-prices' to remove the topic if needed${RESET}"
+echo -e "🎉 ${GREEN}¡Eliminación del conector completa!${RESET}"
+echo -e "💡 ${BLUE}Nota: El tema 'crypto-prices' permanecerá con los datos existentes${RESET}"
+echo -e "💡 ${BLUE}Usa 'confluent kafka topic delete crypto-prices' para eliminar el tema si es necesario${RESET}"

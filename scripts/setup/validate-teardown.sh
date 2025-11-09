@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Confluent Cloud Workshop - Resource Validation Script
-# This script validates that all workshop resources have been properly deleted
-# Based on guides/05-teardown-resources.adoc verification steps
+# Taller de Confluent Cloud - Script de Validación de Recursos
+# Este script valida que todos los recursos del taller hayan sido eliminados correctamente
+# Basado en los pasos de verificación de guides/05-teardown-resources.adoc
 
-# Color definitions for output
+# Definiciones de colores para la salida
 RED='\033[31m'
 GREEN='\033[32m'
 YELLOW='\033[33m'
@@ -12,16 +12,16 @@ BLUE='\033[34m'
 CYAN='\033[36m'
 RESET='\033[0m'
 
-# Exit codes
+# Códigos de salida
 SUCCESS=0
 WARNING=1
 ERROR=2
 
-# Global variables
+# Variables globales
 ISSUES_FOUND=0
 WARNINGS_FOUND=0
 
-# Function to print colored output
+# Función para imprimir salida con colores
 print_status() {
     local status=$1
     local message=$2
@@ -46,69 +46,69 @@ print_status() {
     esac
 }
 
-# Function to check if confluent CLI is available
+# Función para verificar si la CLI de confluent está disponible
 check_cli() {
     if ! command -v confluent &> /dev/null; then
-        print_status "ERROR" "Confluent CLI not found. Please install it first."
+        print_status "ERROR" "CLI de Confluent no encontrada. Por favor instálala primero."
         exit $ERROR
     fi
     
-    # Check if user is logged in
+    # Verificar si el usuario ha iniciado sesión
     if ! confluent context list &> /dev/null; then
-        print_status "ERROR" "Not logged into Confluent Cloud. Run 'confluent login' first."
+        print_status "ERROR" "No has iniciado sesión en Confluent Cloud. Ejecuta 'confluent login' primero."
         exit $ERROR
     fi
 }
 
-# Function to check Flink resources (HIGH COST)
+# Función para verificar recursos de Flink (COSTO ALTO)
 check_flink_resources() {
-    print_status "HEADER" "Checking Flink Resources (High Cost Priority)"
+    print_status "HEADER" "Verificando Recursos de Flink (Prioridad de Costo Alto)"
     
-    # Check Flink compute pools
+    # Verificar pools de cómputo de Flink
     local pools_output
     pools_output=$(confluent flink compute-pool list --output json 2>/dev/null)
     local pools_count
     pools_count=$(echo "$pools_output" | jq '. | length' 2>/dev/null || echo "0")
     
     if [[ "$pools_count" -gt 0 ]]; then
-        print_status "ERROR" "Found $pools_count Flink compute pool(s) - these generate ongoing charges!"
-        echo "$pools_output" | jq -r '.[] | "  - Pool ID: \(.id), Name: \(.name), Status: \(.status)"' 2>/dev/null
+        print_status "ERROR" "Se encontraron $pools_count pool(s) de cómputo de Flink - ¡estos generan cargos continuos!"
+        echo "$pools_output" | jq -r '.[] | "  - ID del Pool: \(.id), Nombre: \(.name), Estado: \(.status)"' 2>/dev/null
     else
-        print_status "SUCCESS" "No Flink compute pools found"
+        print_status "SUCCESS" "No se encontraron pools de cómputo de Flink"
     fi
     
-    # Check Flink statements/applications
+    # Verificar declaraciones/aplicaciones de Flink
     local statements_output
     statements_output=$(confluent flink statement list --output json 2>/dev/null)
     local statements_count
     statements_count=$(echo "$statements_output" | jq '. | length' 2>/dev/null || echo "0")
     
     if [[ "$statements_count" -gt 0 ]]; then
-        print_status "ERROR" "Found $statements_count Flink statement(s) still running!"
-        echo "$statements_output" | jq -r '.[] | "  - Statement: \(.name // "unnamed"), Status: \(.status // "unknown")"' 2>/dev/null
+        print_status "ERROR" "¡Se encontraron $statements_count declaración(es) de Flink aún ejecutándose!"
+        echo "$statements_output" | jq -r '.[] | "  - Declaración: \(.name // "sin nombre"), Estado: \(.status // "desconocido")"' 2>/dev/null
     else
-        print_status "SUCCESS" "No Flink statements found"
+        print_status "SUCCESS" "No se encontraron declaraciones de Flink"
     fi
 }
 
-# Function to check Tableflow resources (MEDIUM COST)
+# Función para verificar recursos de Tableflow (COSTO MEDIO)
 check_tableflow_resources() {
-    print_status "HEADER" "Checking Tableflow Resources (Medium Cost Priority)"
+    print_status "HEADER" "Verificando Recursos de Tableflow (Prioridad de Costo Medio)"
     
-    # Check Tableflow catalog integrations
+    # Verificar integraciones de catálogo de Tableflow
     local catalogs_output
     catalogs_output=$(confluent tableflow catalog-integration list --output json 2>/dev/null)
     local catalogs_count
     catalogs_count=$(echo "$catalogs_output" | jq '. | length' 2>/dev/null || echo "0")
     
     if [[ "$catalogs_count" -gt 0 ]]; then
-        print_status "ERROR" "Found $catalogs_count Tableflow catalog integration(s) - these incur storage costs!"
-        echo "$catalogs_output" | jq -r '.[] | "  - Catalog ID: \(.id // "unknown"), Name: \(.display_name // "unknown"), Status: \(.status // "unknown")"' 2>/dev/null
+        print_status "ERROR" "Se encontraron $catalogs_count integración(es) de catálogo de Tableflow - ¡estas incurren en costos de almacenamiento!"
+        echo "$catalogs_output" | jq -r '.[] | "  - ID del Catálogo: \(.id // "desconocido"), Nombre: \(.display_name // "desconocido"), Estado: \(.status // "desconocido")"' 2>/dev/null
     else
-        print_status "SUCCESS" "No Tableflow catalog integrations found"
+        print_status "SUCCESS" "No se encontraron integraciones de catálogo de Tableflow"
     fi
     
-    # Check Tableflow topic enablement
+    # Verificar habilitación de temas de Tableflow
     if [ -n "$CC_KAFKA_CLUSTER" ]; then
         local tableflow_topics_output
         tableflow_topics_output=$(confluent tableflow topic list --cluster "$CC_KAFKA_CLUSTER" --output json 2>/dev/null)
@@ -116,19 +116,19 @@ check_tableflow_resources() {
         tableflow_topics_count=$(echo "$tableflow_topics_output" | jq '. | length' 2>/dev/null || echo "0")
         
         if [[ "$tableflow_topics_count" -gt 0 ]]; then
-            print_status "ERROR" "Found $tableflow_topics_count Tableflow-enabled topic(s)!"
-            echo "$tableflow_topics_output" | jq -r '.[] | "  - Topic: \(.topic_name), Phase: \(.phase), Suspended: \(.suspended)"' 2>/dev/null
+            print_status "ERROR" "¡Se encontraron $tableflow_topics_count tema(s) habilitado(s) para Tableflow!"
+            echo "$tableflow_topics_output" | jq -r '.[] | "  - Tema: \(.topic_name), Fase: \(.phase), Suspendido: \(.suspended)"' 2>/dev/null
         else
-            print_status "SUCCESS" "No Tableflow-enabled topics found"
+            print_status "SUCCESS" "No se encontraron temas habilitados para Tableflow"
         fi
     else
-        print_status "WARNING" "CC_KAFKA_CLUSTER not set, skipping Tableflow topic check"
+        print_status "WARNING" "CC_KAFKA_CLUSTER no configurado, omitiendo verificación de temas de Tableflow"
     fi
 }
 
-# Function to check connectors
+# Función para verificar conectores
 check_connectors() {
-    print_status "HEADER" "Checking Connectors"
+    print_status "HEADER" "Verificando Conectores"
     
     local connectors_output
     connectors_output=$(confluent connect connector list --output json 2>/dev/null)
@@ -136,7 +136,7 @@ check_connectors() {
     connectors_count=$(echo "$connectors_output" | jq '. | length' 2>/dev/null || echo "0")
     
     if [[ "$connectors_count" -gt 0 ]]; then
-        # Check for workshop-specific topics
+        # Verificar temas específicos del taller
         local expected_topics=("crypto-prices" "price-alerts" "crypto-prices-exploded" "crypto-trends")
         local found_topics=()
         
@@ -147,32 +147,32 @@ check_connectors() {
         done
         
         if [[ ${#found_topics[@]} -gt 0 ]]; then
-            print_status "WARNING" "Found workshop-related topic(s):"
+            print_status "WARNING" "Se encontraron tema(s) relacionado(s) con el taller:"
             for topic in "${found_topics[@]}"; do
                 echo "  - $topic"
             done
         fi
         
-        # Check for workshop-specific connectors
+        # Verificar conectores específicos del taller
         local workshop_connectors
         workshop_connectors=$(echo "$connectors_output" | jq -r '.[] | select(.name | contains("coingecko") or contains("workshop")) | .name' 2>/dev/null)
         
         if [[ -n "$workshop_connectors" ]]; then
-            print_status "ERROR" "Found workshop-related connector(s):"
+            print_status "ERROR" "Se encontraron conector(es) relacionado(s) con el taller:"
             echo "$workshop_connectors" | while read -r connector; do
                 echo "  - $connector"
             done
         else
-            print_status "INFO" "Found $connectors_count connector(s), but none appear workshop-related"
+            print_status "INFO" "Se encontraron $connectors_count conector(es), pero ninguno parece relacionado con el taller"
         fi
     else
-        print_status "SUCCESS" "No connectors found"
+        print_status "SUCCESS" "No se encontraron conectores"
     fi
 }
 
-# Function to check Kafka clusters
+# Función para verificar clústeres de Kafka
 check_kafka_clusters() {
-    print_status "HEADER" "Checking Kafka Clusters"
+    print_status "HEADER" "Verificando Clústeres de Kafka"
     
     local clusters_output
     clusters_output=$(confluent kafka cluster list --output json 2>/dev/null)
@@ -180,39 +180,39 @@ check_kafka_clusters() {
     clusters_count=$(echo "$clusters_output" | jq '. | length' 2>/dev/null || echo "0")
     
     if [[ "$clusters_count" -gt 0 ]]; then
-        # Check for non-Basic clusters (which incur charges)
+        # Verificar clústeres no-Básicos (que incurren en cargos)
         local paid_clusters
         paid_clusters=$(echo "$clusters_output" | jq -r '.[] | select(.type != "BASIC") | "\(.id) (\(.type))"' 2>/dev/null)
         
         if [[ -n "$paid_clusters" ]]; then
-            print_status "ERROR" "Found paid cluster(s) - these generate charges:"
+            print_status "ERROR" "Se encontraron clúster(es) de pago - estos generan cargos:"
             echo "$paid_clusters" | while read -r cluster; do
-                echo "  - Cluster: $cluster"
+                echo "  - Clúster: $cluster"
             done
         fi
         
-        # Check for workshop-named clusters
+        # Verificar clústeres con nombre de taller
         local workshop_clusters
         workshop_clusters=$(echo "$clusters_output" | jq -r '.[] | select(.name | contains("workshop")) | "\(.name) (\(.type))"' 2>/dev/null)
         
         if [[ -n "$workshop_clusters" ]]; then
-            print_status "WARNING" "Found workshop-named cluster(s):"
+            print_status "WARNING" "Se encontraron clúster(es) con nombre de taller:"
             echo "$workshop_clusters" | while read -r cluster; do
                 echo "  - $cluster"
             done
         fi
         
         if [[ -z "$paid_clusters" && -z "$workshop_clusters" ]]; then
-            print_status "SUCCESS" "Found $clusters_count cluster(s), all appear to be Basic (free) tier"
+            print_status "SUCCESS" "Se encontraron $clusters_count clúster(es), todos parecen ser de nivel Básico (gratuito)"
         fi
     else
-        print_status "SUCCESS" "No Kafka clusters found"
+        print_status "SUCCESS" "No se encontraron clústeres de Kafka"
     fi
 }
 
-# Function to check API keys
+# Función para verificar claves API
 check_api_keys() {
-    print_status "HEADER" "Checking API Keys"
+    print_status "HEADER" "Verificando Claves API"
     
     local keys_output
     keys_output=$(confluent api-key list --output json 2>/dev/null)
@@ -220,75 +220,75 @@ check_api_keys() {
     keys_count=$(echo "$keys_output" | jq '. | length' 2>/dev/null || echo "0")
     
     if [[ "$keys_count" -gt 0 ]]; then
-        # Check for workshop-related API keys
+        # Verificar claves API relacionadas con el taller
         local workshop_keys
-        workshop_keys=$(echo "$keys_output" | jq -r '.[] | select(.description | contains("workshop") or contains("Workshop")) | "\(.key) - \(.description)"' 2>/dev/null)
+        workshop_keys=$(echo "$keys_output" | jq -r '.[] | select(.description | contains("workshop") or contains("Workshop") or contains("Taller")) | "\(.key) - \(.description)"' 2>/dev/null)
         
         if [[ -n "$workshop_keys" ]]; then
-            print_status "WARNING" "Found workshop-related API key(s):"
+            print_status "WARNING" "Se encontraron clave(s) API relacionada(s) con el taller:"
             echo "$workshop_keys" | while read -r key; do
                 echo "  - $key"
             done
         else
-            print_status "INFO" "Found $keys_count API key(s), none appear workshop-related"
+            print_status "INFO" "Se encontraron $keys_count clave(s) API, ninguna parece relacionada con el taller"
         fi
     else
-        print_status "SUCCESS" "No API keys found"
+        print_status "SUCCESS" "No se encontraron claves API"
     fi
 }
 
-# Function to check environments
+# Función para verificar entornos
 check_environments() {
-    print_status "HEADER" "Checking Environments"
+    print_status "HEADER" "Verificando Entornos"
     
     local envs_output
     envs_output=$(confluent environment list --output json 2>/dev/null)
     local workshop_envs
-    workshop_envs=$(echo "$envs_output" | jq -r '.[] | select(.name | contains("workshop") or contains("cc-workshop")) | "\(.id) - \(.name)"' 2>/dev/null)
+    workshop_envs=$(echo "$envs_output" | jq -r '.[] | select(.name | contains("workshop") or contains("cc-workshop") or contains("taller")) | "\(.id) - \(.name)"' 2>/dev/null)
     
     if [[ -n "$workshop_envs" ]]; then
-        print_status "WARNING" "Found workshop-related environment(s):"
+        print_status "WARNING" "Se encontraron entorno(s) relacionado(s) con el taller:"
         echo "$workshop_envs" | while read -r env; do
             echo "  - $env"
         done
     else
-        print_status "SUCCESS" "No workshop-related environments found"
+        print_status "SUCCESS" "No se encontraron entornos relacionados con el taller"
     fi
 }
 
-# Function to provide cost monitoring guidance
+# Función para proporcionar guía de monitoreo de costos
 provide_cost_guidance() {
-    print_status "HEADER" "Cost Monitoring Guidance"
+    print_status "HEADER" "Guía de Monitoreo de Costos"
     
-    echo -e "${BLUE}🌐 Please verify in Confluent Cloud Console:${RESET}"
-    echo "1. Go to: https://confluent.cloud"
-    echo "2. Navigate to: Billing & Payment → Usage"
-    echo "3. Verify: No active Flink or Tableflow charges"
-    echo "4. Check: Only Basic cluster (free) or expected resources remain"
+    echo -e "${BLUE}🌐 Por favor verifica en la Consola de Confluent Cloud:${RESET}"
+    echo "1. Ve a: https://confluent.cloud"
+    echo "2. Navega a: Facturación y Pago → Uso"
+    echo "3. Verifica: No hay cargos activos de Flink o Tableflow"
+    echo "4. Comprueba: Solo permanecen clúster Básico (gratuito) o recursos esperados"
     echo ""
     
     if [[ $ISSUES_FOUND -gt 0 ]]; then
-        echo -e "${RED}💰 URGENT: You have $ISSUES_FOUND critical issue(s) that may generate charges!${RESET}"
-        echo "Run the emergency cleanup script from the teardown guide immediately."
+        echo -e "${RED}💰 URGENTE: ¡Tienes $ISSUES_FOUND problema(s) crítico(s) que pueden generar cargos!${RESET}"
+        echo "Ejecuta el script de limpieza de emergencia de la guía de desmontaje inmediatamente."
     elif [[ $WARNINGS_FOUND -gt 0 ]]; then
-        echo -e "${YELLOW}⚠️  You have $WARNINGS_FOUND warning(s) to review.${RESET}"
-        echo "Consider cleaning up these resources if they're no longer needed."
+        echo -e "${YELLOW}⚠️  Tienes $WARNINGS_FOUND advertencia(s) para revisar.${RESET}"
+        echo "Considera limpiar estos recursos si ya no los necesitas."
     else
-        echo -e "${GREEN}🎉 Excellent! No cost-generating resources found.${RESET}"
+        echo -e "${GREEN}🎉 ¡Excelente! No se encontraron recursos que generen costos.${RESET}"
     fi
 }
 
-# Main execution
+# Ejecución principal
 main() {
-    echo -e "${CYAN}🧹 Confluent Cloud Workshop - Resource Validation${RESET}"
-    echo -e "${CYAN}=================================================${RESET}"
-    echo "Checking for remaining billable resources..."
+    echo -e "${CYAN}🧹 Taller de Confluent Cloud - Validación de Recursos${RESET}"
+    echo -e "${CYAN}===================================================${RESET}"
+    echo "Verificando recursos facturables restantes..."
     echo ""
     
-    # Check CLI availability
+    # Verificar disponibilidad de CLI
     check_cli
     
-    # Check resources in order of cost priority
+    # Verificar recursos en orden de prioridad de costo
     check_flink_resources
     echo ""
     
@@ -307,10 +307,10 @@ main() {
     check_environments
     echo ""
     
-    # Provide guidance
+    # Proporcionar guía
     provide_cost_guidance
     
-    # Exit with appropriate code
+    # Salir con código apropiado
     if [[ $ISSUES_FOUND -gt 0 ]]; then
         exit $ERROR
     elif [[ $WARNINGS_FOUND -gt 0 ]]; then
@@ -320,5 +320,5 @@ main() {
     fi
 }
 
-# Run main function
+# Ejecutar función principal
 main "$@"

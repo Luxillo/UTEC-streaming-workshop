@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# 🚀 Deploy HTTP Source Connector for CoinGecko API
-# This script deploys the HTTP Source Connector to stream cryptocurrency price data
+# 🚀 Desplegar Conector HTTP Source para la API de CoinGecko
+# Este script despliega el Conector HTTP Source para transmitir datos de precios de criptomonedas
 
-# Colors for output
+# Colores para la salida
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -12,36 +12,36 @@ RESET='\033[0m'
 
 CONNECTOR_NAME="coingecko-price-connector"
 
-# Source environment variables from .env file if it exists
+# Cargar variables de entorno desde el archivo .env si existe
 if [ -f ".env" ]; then
-    echo -e " ${BLUE}Loading environment variables from .env file...${RESET}"
+    echo -e " ${BLUE}Cargando variables de entorno desde el archivo .env...${RESET}"
     source .env
 fi
 
-echo -e " ${BLUE}Deploying HTTP Source Connector${RESET}"
-echo "=================================="
+echo -e " ${BLUE}Desplegando Conector HTTP Source${RESET}"
+echo "================================"
 
-# Check for required environment variables
-echo -e " ${YELLOW}Checking environment variables...${RESET}"
+# Verificar variables de entorno requeridas
+echo -e " ${YELLOW}Verificando variables de entorno...${RESET}"
 if [ -z "$KAFKA_API_KEY" ] || [ -z "$KAFKA_API_SECRET" ]; then
-    echo -e " ${RED}Missing required environment variables${RESET}"
-    echo -e " ${BLUE}Please set the following environment variables or create .env file:${RESET}"
-    echo -e "   export KAFKA_API_KEY=\"your-api-key\""
-    echo -e "   export KAFKA_API_SECRET=\"your-api-secret\""
-    echo -e " ${BLUE}Or run: source .env${RESET}"
+    echo -e " ${RED}Faltan variables de entorno requeridas${RESET}"
+    echo -e " ${BLUE}Por favor configura las siguientes variables de entorno o crea el archivo .env:${RESET}"
+    echo -e "   export KAFKA_API_KEY=\"tu-clave-api\""
+    echo -e "   export KAFKA_API_SECRET=\"tu-secreto-api\""
+    echo -e " ${BLUE}O ejecuta: source .env${RESET}"
     exit 1
 fi
 
-# Use existing config file or create from template
+# Usar archivo de configuración existente o crear desde plantilla
 CONFIG_FILE="../configs/connector-configs/http-source-coingecko.json"
 TEMP_CONFIG="/tmp/coingecko-connector.json"
 
 if [ -f "$CONFIG_FILE" ]; then
-    echo -e "📝 ${YELLOW}Using existing connector configuration...${RESET}"
-    # Substitute environment variables in the config
+    echo -e "📝 ${YELLOW}Usando configuración de conector existente...${RESET}"
+    # Sustituir variables de entorno en la configuración
     envsubst < "$CONFIG_FILE" > "$TEMP_CONFIG"
 else
-    echo -e "📝 ${YELLOW}Creating connector configuration...${RESET}"
+    echo -e "📝 ${YELLOW}Creando configuración del conector...${RESET}"
     
     cat > "$TEMP_CONFIG" << EOF
 {
@@ -63,26 +63,26 @@ else
 EOF
 fi
 
-echo -e "✅ ${GREEN}Connector configuration ready${RESET}"
+echo -e "✅ ${GREEN}Configuración del conector lista${RESET}"
 
-# Deploy the connector
+# Desplegar el conector
 echo ""
-echo -e "🚀 ${YELLOW}Deploying HTTP Source Connector...${RESET}"
+echo -e "🚀 ${YELLOW}Desplegando Conector HTTP Source...${RESET}"
 
 confluent connect cluster create --config-file "$TEMP_CONFIG"
 
 if [ $? -eq 0 ]; then
-    echo -e "✅ ${GREEN}Connector deployed successfully${RESET}"
-    echo -e "💡 ${BLUE}Use 'validate-connector.sh' to check connector status${RESET}"
-    echo -e "📊 ${BLUE}Use Confluent Extension for VSCode to validate data flow${RESET}"
+    echo -e "✅ ${GREEN}Conector desplegado exitosamente${RESET}"
+    echo -e "💡 ${BLUE}Usa 'validate-connector.sh' para verificar el estado del conector${RESET}"
+    echo -e "📊 ${BLUE}Usa la Extensión de Confluent para VSCode para validar el flujo de datos${RESET}"
 else
-    echo -e "❌ ${RED}Failed to deploy connector${RESET}"
-    echo -e "🔍 Check your API credentials and cluster configuration"
+    echo -e "❌ ${RED}Falló el despliegue del conector${RESET}"
+    echo -e "🔍 Verifica tus credenciales de API y la configuración del clúster"
     exit 1
 fi
 
-# Cleanup
+# Limpiar archivos temporales
 rm -f "$TEMP_CONFIG"
 
 echo ""
-echo -e "🎉 ${GREEN}Connector deployment complete!${RESET}"
+echo -e "🎉 ${GREEN}¡Despliegue del conector completo!${RESET}"

@@ -1,61 +1,69 @@
 #!/bin/bash
 
-# 🔐 Confluent Cloud Authentication Helper Script
-# This script helps with Confluent Cloud login and context setup
+# 🔐 Script de Ayuda para Autenticación en Confluent Cloud
+# Este script ayuda con el login y configuración de contexto en Confluent Cloud
 
-# Colors for output
+# Colores para la salida
 RED='\033[31m'
 GREEN='\033[32m'
 YELLOW='\033[33m'
 BLUE='\033[34m'
 RESET='\033[0m'
 
-echo -e "🔐 ${BLUE}Confluent Cloud Authentication Setup${RESET}"
-echo "=========================================="
+echo -e "🔐 ${BLUE}Configuración de Autenticación en Confluent Cloud${RESET}"
+echo "==============================================="
 
-# Check if Confluent CLI is installed
+# Verificar si la CLI de Confluent está instalada
 if ! command -v confluent &> /dev/null; then
-    echo -e "❌ ${RED}Confluent CLI is not installed${RESET}"
-    echo "📥 Please install it first: curl -sL --http1.1 https://cnfl.io/cli | sh -s -- latest"
+    echo -e "❌ ${RED}La CLI de Confluent no está instalada${RESET}"
+    echo "📥 Por favor instálala primero: curl -sL --http1.1 https://cnfl.io/cli | sh -s -- latest"
     exit 1
 fi
 
-echo -e "✅ ${GREEN}Confluent CLI found${RESET}"
+echo -e "✅ ${GREEN}CLI de Confluent encontrada${RESET}"
 
-# Login to Confluent Cloud
+# Iniciar sesión en Confluent Cloud
 echo ""
-echo "🔑 Logging into Confluent Cloud..."
-confluent login --save
+echo "🔑 Iniciando sesión en Confluent Cloud..."
+echo -e "${YELLOW}Esto proporcionará una URL para autenticación en el navegador${RESET}"
+echo -e "${YELLOW}Copia la URL proporcionada y pégala en tu navegador${RESET}"
+echo -e "${YELLOW}Luego copia el código de autorización y pégalo aquí${RESET}"
+echo ""
+echo -e "${BLUE}Presiona Enter para continuar...${RESET}"
+read -r
+
+confluent login --save --no-browser
 
 if [ $? -eq 0 ]; then
-    echo -e "✅ ${GREEN}Successfully logged into Confluent Cloud${RESET}"
+    echo -e "✅ ${GREEN}Sesión iniciada exitosamente en Confluent Cloud${RESET}"
 else
-    echo -e "❌ ${RED}Login failed. Please check your credentials.${RESET}"
+    echo -e "❌ ${RED}Falló el inicio de sesión. Por favor verifica tus credenciales.${RESET}"
+    echo -e "${YELLOW}Consejo: Asegúrate de haber copiado el código de autorización correctamente${RESET}"
     exit 1
 fi
 
-# List organizations
+# Listar organizaciones
 echo ""
-echo -e " Available Organizations:"
+echo -e " Organizaciones Disponibles:"
 confluent organization list
 
-# Note: Context is automatically created during login
+# Nota: El contexto se crea automáticamente durante el login
 echo ""
-echo -e "🔧 ${YELLOW}Checking current context...${RESET}"
+echo -e "🔧 ${YELLOW}Verificando contexto actual...${RESET}"
 CURRENT_CONTEXT=$(confluent context list | grep '\*' | awk -F'|' '{gsub(/^ *| *$/, "", $2); print $2}')
 if [ -n "$CURRENT_CONTEXT" ]; then
-    echo -e "✅ ${GREEN}Using context: $CURRENT_CONTEXT${RESET}"
+    echo -e "✅ ${GREEN}Usando contexto: $CURRENT_CONTEXT${RESET}"
 else
-    echo -e "⚠️  ${YELLOW}No active context found${RESET}"
+    echo -e "⚠️  ${YELLOW}No se encontró contexto activo${RESET}"
 fi
 
-# List current contexts
+# Listar contextos actuales
 echo ""
-echo -e " Current CLI contexts:"
+echo -e " Contextos CLI actuales:"
 confluent context list
 
 echo ""
-echo -e " Authentication setup complete!"
-echo -e " Next steps:"
-echo "   1. Create an environment: confluent environment create 'cc-workshop-env'"
-echo "   2. Create a Kafka cluster: confluent kafka cluster create workshop-cluster --cloud aws --region us-east-1 --type basic"
+echo -e " ¡Configuración de autenticación completa!"
+echo -e " Próximos pasos:"
+echo "   1. Crear un entorno: confluent environment create 'cc-workshop-env'"
+echo "   2. Crear un clúster de Kafka: confluent kafka cluster create workshop-cluster --cloud aws --region us-east-1 --type basic"

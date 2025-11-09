@@ -2,5 +2,6 @@
 .history
 scripts/kafka/.env
 *.db
+*.backup
 *.log
 _bak
