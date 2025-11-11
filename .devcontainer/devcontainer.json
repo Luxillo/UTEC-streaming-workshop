@@ -55,7 +55,7 @@
     
   },
 
-  "onCreateCommand": ".devcontainer/bootstrap.sh",
+  "onCreateCommand": "chmod +x .devcontainer/bootstrap.sh && .devcontainer/bootstrap.sh",
   "postStartCommand": "echo '🎉 Confluent Cloud Workshop environment ready!'",
 
   "forwardPorts": [8080, 3000, 5000, 8000],

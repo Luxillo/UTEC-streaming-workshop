@@ -72,17 +72,6 @@ else
 fi
 echo -e "✅ ${GREEN}Python packages installed${RESET}"
 
-# Install DataOps specific tools
-echo -e "📊 ${YELLOW}Installing DataOps tools...${RESET}"
-if command -v pip3 >/dev/null 2>&1; then
-    pip3 install --user great-expectations apache-airflow dbt-core dbt-duckdb pytest
-elif command -v pip >/dev/null 2>&1; then
-    pip install --user great-expectations apache-airflow dbt-core dbt-duckdb pytest
-else
-    python3 -m pip install --user great-expectations apache-airflow dbt-core dbt-duckdb pytest
-fi
-echo -e "✅ ${GREEN}DataOps tools installed${RESET}"
-
 # Install Java dependencies
 echo -e "☕ ${YELLOW}Setting up Java environment...${RESET}"
 # Maven dependencies will be handled by individual projects
@@ -115,8 +104,6 @@ workshop-status() {
     echo "  DuckDB: $(duckdb --version 2>/dev/null || echo 'Not available')"
     echo "  Python: $(python3 --version)"
     echo "  Java: $(java -version 2>&1 | head -1)"
-    echo "  Great Expectations: $(python3 -c 'import great_expectations; print(great_expectations.__version__)' 2>/dev/null || echo 'Not available')"
-    echo "  dbt: $(dbt --version 2>/dev/null | head -1 || echo 'Not available')"
 }
 
 workshop-validate() {
@@ -125,35 +112,6 @@ workshop-validate() {
         ./scripts/setup/validate-prerequisites.sh
     else
         echo "❌ Validation script not found. Make sure you're in the workshop root directory."
-    fi
-}
-
-workshop-login() {
-    echo "🔐 Starting Confluent Cloud login..."
-    if [ -f "./scripts/setup/confluent-login.sh" ]; then
-        ./scripts/setup/confluent-login.sh
-    else
-        echo "❌ Login script not found. Make sure you're in the workshop root directory."
-    fi
-}
-
-dataops-init() {
-    echo "📊 Initializing DataOps environment..."
-    if [ -f "./scripts/dataops/init-dataops.sh" ]; then
-        ./scripts/dataops/init-dataops.sh
-    else
-        echo "❌ DataOps init script not found. Creating basic structure..."
-        mkdir -p ./dataops/{dbt,great_expectations,airflow,tests}
-        echo "✅ Basic DataOps structure created"
-    fi
-}
-
-dataops-validate() {
-    echo "🧪 Validating DataOps pipeline..."
-    if [ -f "./scripts/dataops/validate-pipeline.sh" ]; then
-        ./scripts/dataops/validate-pipeline.sh
-    else
-        echo "❌ DataOps validation script not found."
     fi
 }
 
@@ -169,14 +127,11 @@ echo -e "   📝 Students can validate and install manually if needed${RESET}"
 
 # Create welcome message
 cat > /home/vscode/.workshop-welcome << 'EOF'
-🎉 ¡Bienvenido al taller de Confluent Cloud y DataOps!
+🎉 ¡Bienvenido al taller de Confluent Cloud DatOps!
 
 Comandos de inicio rápido:
     workshop-status     - Verificar el estado del entorno
     workshop-validate   - Ejecutar la validación de prerrequisitos
-    workshop-login      - Iniciar sesión en Confluent Cloud
-    dataops-init        - Inicializar entorno DataOps
-    dataops-validate    - Validar pipeline DataOps
 
 Estructura del taller:
     📚 guias/ - Guías paso a paso del taller
@@ -184,21 +139,11 @@ Estructura del taller:
     📊 data/ - Archivos de datos de ejemplo
     ⚙️ configs/ - Plantillas de configuración
     🚨 troubleshooting/ - Guías para la resolución de problemas
-    📈 dataops/ - Herramientas y pipelines DataOps
 
-Talleres disponibles:
-    🚀 Kafka Streaming - Procesamiento en tiempo real
-    📊 DataOps - Pipelines de datos, calidad y observabilidad
-
-Próximos pasos para Kafka:
+Próximos pasos:
     1. Ejecutar: workshop-validate
-    2. Ejecutar: workshop-login
-    3. Seguir guias/01-setup-confluent-cloud.adoc
-
-Próximos pasos para DataOps:
-    1. Ejecutar: workshop-validate
-    2. Ejecutar: dataops-init
-    3. Seguir guias/dataops/01-setup-dataops-environment.adoc
+    2. Ejecutar Infraestructura Confluent: scripts\setup\confluent-setup-complete.sh
+    3. Seguir clase-dataops: clase-dataops\01-teoria-dataops.md
 
 ¡Que disfrutes aprendiendo! 🚀
 EOF

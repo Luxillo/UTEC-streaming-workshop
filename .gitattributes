@@ -1,0 +1,4 @@
+# Preserve executable permissions for shell scripts
+*.sh text eol=lf
+.devcontainer/bootstrap.sh text eol=lf
+scripts/**/*.sh text eol=lf

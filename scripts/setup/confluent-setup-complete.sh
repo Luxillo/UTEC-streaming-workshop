@@ -53,17 +53,22 @@ echo ""
 echo -e "🔐 ${BLUE}Paso 2: Autenticación en Confluent Cloud${RESET}"
 echo "========================================="
 
-echo -e "${YELLOW}Iniciando login en Confluent Cloud...${RESET}"
-echo -e "${YELLOW}Esto proporcionará una URL para autenticación en el navegador${RESET}"
-echo -e "${YELLOW}Copia la URL proporcionada y pégala en tu navegador${RESET}"
-echo -e "${YELLOW}Luego copia el código de autorización y pégalo aquí${RESET}"
-wait_for_user
-
-if confluent login --save --no-browser; then
-    echo -e "✅ ${GREEN}Autenticación exitosa con Confluent Cloud${RESET}"
+# Verificar si ya está logueado
+if confluent organization list > /dev/null 2>&1; then
+    echo -e "✅ ${GREEN}Ya estás autenticado en Confluent Cloud${RESET}"
 else
-    echo -e "❌ ${RED}Falló la autenticación${RESET}"
-    exit 1
+    echo -e "${YELLOW}Iniciando login en Confluent Cloud...${RESET}"
+    echo -e "${YELLOW}Esto proporcionará una URL para autenticación en el navegador${RESET}"
+    echo -e "${YELLOW}Copia la URL proporcionada y pégala en tu navegador${RESET}"
+    echo -e "${YELLOW}Luego copia el código de autorización y pégalo aquí${RESET}"
+    wait_for_user
+
+    if confluent login --save --no-browser; then
+        echo -e "✅ ${GREEN}Autenticación exitosa con Confluent Cloud${RESET}"
+    else
+        echo -e "❌ ${RED}Falló la autenticación${RESET}"
+        exit 1
+    fi
 fi
 
 echo ""
@@ -105,21 +110,32 @@ echo ""
 echo -e "☁️ ${BLUE}Paso 4: Creación del Clúster de Kafka${RESET}"
 echo "====================================="
 
-echo -e "${YELLOW}Creando clúster básico de Kafka (esto puede tomar unos minutos)...${RESET}"
-CLUSTER_OUTPUT=$(confluent kafka cluster create workshop-cluster \
-    --cloud aws \
-    --region us-east-1 \
-    --type basic \
-    --output json)
+echo -e "${YELLOW}Verificando si el clúster del taller ya existe...${RESET}"
 
-CC_KAFKA_CLUSTER=$(echo "$CLUSTER_OUTPUT" | jq -r '.id')
+# Buscar clúster existente
+EXISTING_CLUSTER=$(confluent kafka cluster list --output json | jq -r '.[] | select(.name=="workshop-cluster") | .id')
 
-if [ "$CC_KAFKA_CLUSTER" != "null" ] && [ -n "$CC_KAFKA_CLUSTER" ]; then
-    echo -e "✅ ${GREEN}Clúster de Kafka creado: $CC_KAFKA_CLUSTER${RESET}"
+if [ -n "$EXISTING_CLUSTER" ] && [ "$EXISTING_CLUSTER" != "null" ]; then
+    echo -e "✅ ${GREEN}Clúster existente encontrado: $EXISTING_CLUSTER${RESET}"
+    CC_KAFKA_CLUSTER="$EXISTING_CLUSTER"
     confluent kafka cluster use "$CC_KAFKA_CLUSTER"
 else
-    echo -e "❌ ${RED}Falló la creación del clúster de Kafka${RESET}"
-    exit 1
+    echo -e "${YELLOW}Creando clúster básico de Kafka (esto puede tomar unos minutos)...${RESET}"
+    CLUSTER_OUTPUT=$(confluent kafka cluster create workshop-cluster \
+        --cloud aws \
+        --region us-east-1 \
+        --type basic \
+        --output json)
+
+    CC_KAFKA_CLUSTER=$(echo "$CLUSTER_OUTPUT" | jq -r '.id')
+
+    if [ "$CC_KAFKA_CLUSTER" != "null" ] && [ -n "$CC_KAFKA_CLUSTER" ]; then
+        echo -e "✅ ${GREEN}Clúster de Kafka creado: $CC_KAFKA_CLUSTER${RESET}"
+        confluent kafka cluster use "$CC_KAFKA_CLUSTER"
+    else
+        echo -e "❌ ${RED}Falló la creación del clúster de Kafka${RESET}"
+        exit 1
+    fi
 fi
 
 # Esperar a que el clúster esté listo
@@ -146,46 +162,72 @@ echo "================================"
 
 # Clave API de Kafka
 echo -e "${YELLOW}Creando clave API de Kafka...${RESET}"
-KAFKA_API_OUTPUT=$(confluent api-key create --resource "$CC_KAFKA_CLUSTER" --description "Clave API Kafka del Taller" --output json)
-KAFKA_API_KEY=$(echo "$KAFKA_API_OUTPUT" | jq -r '.key')
-KAFKA_API_SECRET=$(echo "$KAFKA_API_OUTPUT" | jq -r '.secret')
+echo -e "${YELLOW}Clúster ID: $CC_KAFKA_CLUSTER${RESET}"
 
-if [ "$KAFKA_API_KEY" != "null" ] && [ -n "$KAFKA_API_KEY" ]; then
+KAFKA_API_OUTPUT=$(confluent api-key create --resource "$CC_KAFKA_CLUSTER" --description "Clave API Kafka del Taller" --output json 2>&1)
+echo -e "${YELLOW}Salida del comando: $KAFKA_API_OUTPUT${RESET}"
+
+# Decodificar entidades HTML y parsear JSON
+KAFKA_API_JSON=$(echo "$KAFKA_API_OUTPUT" | sed 's/&quot;/"/g')
+KAFKA_API_KEY=$(echo "$KAFKA_API_JSON" | jq -r '.api_key // .key' 2>/dev/null)
+KAFKA_API_SECRET=$(echo "$KAFKA_API_JSON" | jq -r '.api_secret // .secret' 2>/dev/null)
+
+if [ "$KAFKA_API_KEY" != "null" ] && [ -n "$KAFKA_API_KEY" ] && [ "$KAFKA_API_KEY" != "" ]; then
     echo -e "✅ ${GREEN}Clave API de Kafka creada: $KAFKA_API_KEY${RESET}"
     confluent api-key use "$KAFKA_API_KEY" --resource "$CC_KAFKA_CLUSTER"
 else
     echo -e "❌ ${RED}Falló la creación de la clave API de Kafka${RESET}"
+    echo -e "${RED}Salida completa: $KAFKA_API_OUTPUT${RESET}"
     exit 1
 fi
 
 # Clave API del Registro de Esquemas
 echo -e "${YELLOW}Obteniendo información del clúster del Registro de Esquemas...${RESET}"
-SR_CLUSTER_OUTPUT=$(confluent schema-registry cluster describe --output json)
-SCHEMA_REGISTRY_CLUSTER_ID=$(echo "$SR_CLUSTER_OUTPUT" | jq -r '.cluster_id')
-SCHEMA_REGISTRY_URL=$(echo "$SR_CLUSTER_OUTPUT" | jq -r '.endpoint_url')
+SR_CLUSTER_OUTPUT=$(confluent schema-registry cluster describe --output json 2>&1)
+echo -e "${YELLOW}Salida SR: $SR_CLUSTER_OUTPUT${RESET}"
 
-echo -e "${YELLOW}Creando clave API del Registro de Esquemas...${RESET}"
-SR_API_OUTPUT=$(confluent api-key create --resource "$SCHEMA_REGISTRY_CLUSTER_ID" --description "Clave API Registro de Esquemas del Taller" --output json)
-SCHEMA_REGISTRY_API_KEY=$(echo "$SR_API_OUTPUT" | jq -r '.key')
-SCHEMA_REGISTRY_API_SECRET=$(echo "$SR_API_OUTPUT" | jq -r '.secret')
+# Decodificar entidades HTML si es necesario
+SR_CLUSTER_JSON=$(echo "$SR_CLUSTER_OUTPUT" | sed 's/&quot;/"/g')
+SCHEMA_REGISTRY_CLUSTER_ID=$(echo "$SR_CLUSTER_JSON" | jq -r '.cluster // .cluster_id // .id' 2>/dev/null)
+SCHEMA_REGISTRY_URL=$(echo "$SR_CLUSTER_JSON" | jq -r '.endpoint_url // .endpoint' 2>/dev/null)
 
-if [ "$SCHEMA_REGISTRY_API_KEY" != "null" ] && [ -n "$SCHEMA_REGISTRY_API_KEY" ]; then
-    echo -e "✅ ${GREEN}Clave API del Registro de Esquemas creada: $SCHEMA_REGISTRY_API_KEY${RESET}"
+if [ "$SCHEMA_REGISTRY_CLUSTER_ID" = "null" ] || [ -z "$SCHEMA_REGISTRY_CLUSTER_ID" ]; then
+    echo -e "⚠️ ${YELLOW}Schema Registry no disponible o no habilitado. Saltando...${RESET}"
+    SCHEMA_REGISTRY_API_KEY=""
+    SCHEMA_REGISTRY_API_SECRET=""
+    SCHEMA_REGISTRY_URL=""
 else
-    echo -e "❌ ${RED}Falló la creación de la clave API del Registro de Esquemas${RESET}"
-    exit 1
+    echo -e "${YELLOW}Creando clave API del Registro de Esquemas...${RESET}"
+    SR_API_OUTPUT=$(confluent api-key create --resource "$SCHEMA_REGISTRY_CLUSTER_ID" --description "Clave API Registro de Esquemas del Taller" --output json 2>&1)
+    
+    # Decodificar entidades HTML
+    SR_API_JSON=$(echo "$SR_API_OUTPUT" | sed 's/&quot;/"/g')
+    SCHEMA_REGISTRY_API_KEY=$(echo "$SR_API_JSON" | jq -r '.api_key // .key' 2>/dev/null)
+    SCHEMA_REGISTRY_API_SECRET=$(echo "$SR_API_JSON" | jq -r '.api_secret // .secret' 2>/dev/null)
+
+    if [ "$SCHEMA_REGISTRY_API_KEY" != "null" ] && [ -n "$SCHEMA_REGISTRY_API_KEY" ]; then
+        echo -e "✅ ${GREEN}Clave API del Registro de Esquemas creada: $SCHEMA_REGISTRY_API_KEY${RESET}"
+    else
+        echo -e "❌ ${RED}Falló la creación de la clave API del Registro de Esquemas${RESET}"
+        echo -e "${RED}Salida: $SR_API_OUTPUT${RESET}"
+        exit 1
+    fi
 fi
 
 # Clave API de Tableflow
 echo -e "${YELLOW}Creando clave API de Tableflow...${RESET}"
-TABLEFLOW_API_OUTPUT=$(confluent api-key create --resource tableflow --description "Clave API Tableflow del Taller" --output json)
-TABLEFLOW_API_KEY=$(echo "$TABLEFLOW_API_OUTPUT" | jq -r '.key')
-TABLEFLOW_API_SECRET=$(echo "$TABLEFLOW_API_OUTPUT" | jq -r '.secret')
+TABLEFLOW_API_OUTPUT=$(confluent api-key create --resource tableflow --description "Clave API Tableflow del Taller" --output json 2>&1)
+
+# Decodificar entidades HTML
+TABLEFLOW_API_JSON=$(echo "$TABLEFLOW_API_OUTPUT" | sed 's/&quot;/"/g')
+TABLEFLOW_API_KEY=$(echo "$TABLEFLOW_API_JSON" | jq -r '.api_key // .key' 2>/dev/null)
+TABLEFLOW_API_SECRET=$(echo "$TABLEFLOW_API_JSON" | jq -r '.api_secret // .secret' 2>/dev/null)
 
 if [ "$TABLEFLOW_API_KEY" != "null" ] && [ -n "$TABLEFLOW_API_KEY" ]; then
     echo -e "✅ ${GREEN}Clave API de Tableflow creada: $TABLEFLOW_API_KEY${RESET}"
 else
     echo -e "❌ ${RED}Falló la creación de la clave API de Tableflow${RESET}"
+    echo -e "${RED}Salida: $TABLEFLOW_API_OUTPUT${RESET}"
     exit 1
 fi
 
@@ -222,6 +264,7 @@ if [ ! -f "$ENV_FILE" ]; then
 # Confluent Cloud API Keys
 # Generado/actualizado automáticamente por confluent-setup-complete.sh
 # Source this file before running scripts: source .env
+
 # Confluent Cloud Organization ID
 export CC_ORG_ID=""
 
@@ -313,4 +356,4 @@ echo ""
 echo -e "${GREEN}Próximos pasos:${RESET}"
 echo "1. Cargar el archivo de entorno: source $ENV_FILE"
 echo "2. Continuar con las guías del taller"
-echo "3. ¡Comenzar a crear temas y transmitir datos!" archivo de entorno: source $ENV_FILE"
+echo "3. ¡Comenzar a crear temas y transmitir datos!"
